@@ -1,0 +1,251 @@
+name: Build Pura X APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths:
+      - "deepseek-harness-pura-x-mobile-v0.1.0-source.zip"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: read
+
+env:
+  NODE_MOBILE_SHA: "4608d3c670cf37b383dbe631de4992cf23da46e0"
+  NODE_MOBILE_CACHE_KEY: "node-mobile-24.5.0-android-arm64-r27d-4608d3c670cf37b383dbe631de4992cf23da46e0"
+  ANDROID_NDK_VERSION: "r27d"
+  ANDROID_TARGET_SDK_VERSION: "24"
+  LDFLAGS: "-Wl,-z,max-page-size=16384"
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  node-arm64:
+    name: Prepare Node.js 24 ARM64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+
+    steps:
+      - name: Restore cached Node.js Mobile prebuilt
+        id: node-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: node-mobile-prebuilt.tar.gz
+          key: ${{ env.NODE_MOBILE_CACHE_KEY }}
+
+      - name: Checkout Node.js Mobile 24.5
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ybaelli/nodejs-mobile
+          ref: ${{ env.NODE_MOBILE_SHA }}
+          path: nodejs-mobile
+          fetch-depth: 1
+
+      - name: Install Node build prerequisites
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            gcc-multilib g++-multilib rsync
+
+      - name: Set up Android NDK r27d
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          add-to-path: false
+
+      - name: Set up sccache
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Build Node.js 24.5 ARM64 with heartbeat
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        env:
+          MY_ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          cd nodejs-mobile
+
+          (
+            ./tools/android_build.sh \
+              "$MY_ANDROID_NDK_HOME" \
+              "$ANDROID_TARGET_SDK_VERSION" \
+              arm64
+          ) &
+          BUILD_PID=$!
+
+          while kill -0 "$BUILD_PID" 2>/dev/null; do
+            sleep 60
+            echo "===== Node build heartbeat $(date -u +'%Y-%m-%dT%H:%M:%SZ') ====="
+            printf "compiled object files: "
+            find out/Release -type f -name '*.o' 2>/dev/null | wc -l || true
+            free -h || true
+          done
+
+          wait "$BUILD_PID"
+
+          test -f out_android/arm64-v8a/libnode.so
+          test -d out_android/libnode/include/node
+
+      - name: Package Node prebuilt
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf node-stage
+          mkdir -p node-stage/out_android/arm64-v8a
+          mkdir -p node-stage/out_android/libnode/include
+
+          cp nodejs-mobile/out_android/arm64-v8a/libnode.so \
+             node-stage/out_android/arm64-v8a/libnode.so
+
+          cp -R nodejs-mobile/out_android/libnode/include/node \
+             node-stage/out_android/libnode/include/node
+
+          tar -C node-stage -czf node-mobile-prebuilt.tar.gz out_android
+
+          tar -tzf node-mobile-prebuilt.tar.gz > node-mobile-prebuilt.contents.txt
+          head -50 node-mobile-prebuilt.contents.txt
+          ls -lh node-mobile-prebuilt.tar.gz
+
+      - name: Save Node.js Mobile prebuilt cache
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: node-mobile-prebuilt.tar.gz
+          key: ${{ env.NODE_MOBILE_CACHE_KEY }}
+
+      - name: Upload Node prebuilt for APK job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-mobile-24.5-arm64-prebuilt
+          path: node-mobile-prebuilt.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  build-apk:
+    name: Build DeepSeek Harness APK
+    needs: node-arm64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Expand uploaded source ZIP
+        run: |
+          set -euo pipefail
+          test -f deepseek-harness-pura-x-mobile-v0.1.0-source.zip
+          rm -rf .build-src project
+          mkdir -p .build-src
+          unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d .build-src
+          test -d .build-src/deepseek-harness-pura-x-mobile
+          mv .build-src/deepseek-harness-pura-x-mobile project
+
+      - name: Download cached/prebuilt Node.js Mobile
+        uses: actions/download-artifact@v4
+        with:
+          name: node-mobile-24.5-arm64-prebuilt
+          path: project/.deps/node-prebuilt
+
+      - name: Restore Node.js Mobile layout
+        run: |
+          set -euo pipefail
+          mkdir -p project/.deps/nodejs-mobile
+          tar -C project/.deps/nodejs-mobile \
+              -xzf project/.deps/node-prebuilt/node-mobile-prebuilt.tar.gz
+
+          test -f project/.deps/nodejs-mobile/out_android/arm64-v8a/libnode.so
+          test -d project/.deps/nodejs-mobile/out_android/libnode/include/node
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1"
+
+      - name: Set up Android NDK r27d
+        id: apk-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          add-to-path: false
+
+      - name: Configure Android paths
+        run: |
+          echo "ANDROID_NDK_HOME=${{ steps.apk-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${{ steps.apk-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+          {
+            echo "sdk.dir=$ANDROID_HOME"
+            echo "ndk.dir=${{ steps.apk-ndk.outputs.ndk-path }}"
+          } > project/local.properties
+
+      - name: Install libnode and headers into Android app
+        working-directory: project
+        run: |
+          bash ./scripts/install-node-mobile-artifacts.sh .deps/nodejs-mobile
+          ls -lh app/src/main/jniLibs/arm64-v8a/libnode.so
+
+      - name: Verify libnode ELF alignment
+        working-directory: project
+        run: |
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+            -l app/src/main/jniLibs/arm64-v8a/libnode.so | grep -E "LOAD|Align" || true
+
+      - name: Ensure 16KB alignment for JNI bridge
+        working-directory: project
+        run: |
+          if ! grep -q "max-page-size=16384" app/src/main/cpp/CMakeLists.txt; then
+            printf '\n# Android 16KB page-size compatibility\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")\n' \
+              >> app/src/main/cpp/CMakeLists.txt
+          fi
+
+      - name: Set up build-time Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.5.0"
+
+      - name: Build embedded DeepSeek Harness runtime asset
+        working-directory: project
+        run: |
+          bash ./scripts/package-runtime.sh
+          ls -lh app/src/main/assets/dsh-runtime.zip
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build signed debug APK
+        working-directory: project
+        run: |
+          gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK contents
+        working-directory: project
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | \
+            grep -E "lib/arm64-v8a/libnode.so|lib/arm64-v8a/libdsh_bridge.so|assets/dsh-runtime.zip"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepseek-harness-pura-x-debug-apk
+          path: project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
