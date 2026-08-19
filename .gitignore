@@ -1,0 +1,11 @@
+.gradle/
+.idea/
+local.properties
+build/
+app/build/
+.deps/
+app/src/main/assets/dsh-runtime.zip
+app/src/main/jniLibs/arm64-v8a/libnode.so
+app/src/main/cpp/node-include/*
+!app/src/main/cpp/node-include/.gitkeep
+*.iml
