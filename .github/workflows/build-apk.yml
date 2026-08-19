@@ -106,7 +106,8 @@ jobs:
 
           tar -C node-stage -czf node-mobile-prebuilt.tar.gz out_android
 
-          tar -tzf node-mobile-prebuilt.tar.gz | head -50
+          tar -tzf node-mobile-prebuilt.tar.gz > node-mobile-prebuilt.contents.txt
+head -50 node-mobile-prebuilt.contents.txt
           ls -lh node-mobile-prebuilt.tar.gz
 
       - name: Save Node.js Mobile prebuilt cache
