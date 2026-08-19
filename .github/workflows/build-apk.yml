@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+env:
+  ANDROID_NDK_VERSION: r27d
+  ANDROID_TARGET_SDK_VERSION: "24"
+  LDFLAGS: "-Wl,-z,max-page-size=16384"
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -23,7 +28,7 @@ jobs:
       - name: Expand uploaded source ZIP
         run: |
           test -f deepseek-harness-pura-x-mobile-v0.1.0-source.zip
-          rm -rf .build-src
+          rm -rf .build-src project
           mkdir -p .build-src
           unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d .build-src
           test -d .build-src/deepseek-harness-pura-x-mobile
@@ -46,15 +51,30 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK / NDK
+      - name: Install Android SDK components
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
-            "cmake;3.22.1" \
-            "ndk;24.0.8215888"
+            "cmake;3.22.1"
+
+      - name: Set up Android NDK r27d
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          add-to-path: false
+
+      - name: Export Android NDK path
+        run: |
+          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+          {
+            echo "sdk.dir=$ANDROID_HOME"
+            echo "ndk.dir=${{ steps.setup-ndk.outputs.ndk-path }}"
+          } > project/local.properties
 
       - name: Checkout Node.js Mobile 24.5 Android branch
         uses: actions/checkout@v4
@@ -67,8 +87,8 @@ jobs:
         working-directory: project/.deps/nodejs-mobile
         run: |
           ./tools/android_build.sh \
-            "$ANDROID_HOME/ndk/24.0.8215888" \
-            28 \
+            "$ANDROID_NDK_HOME" \
+            "$ANDROID_TARGET_SDK_VERSION" \
             arm64
 
       - name: Install libnode and headers into app
@@ -80,8 +100,16 @@ jobs:
       - name: Inspect libnode ELF alignment
         working-directory: project
         run: |
-          "$ANDROID_HOME/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
             -l app/src/main/jniLibs/arm64-v8a/libnode.so | grep -E "LOAD|Align" || true
+
+      - name: Ensure 16KB alignment for JNI bridge
+        working-directory: project
+        run: |
+          if ! grep -q "max-page-size=16384" app/src/main/cpp/CMakeLists.txt; then
+            printf '\n# Pura X / Android 15+ 16KB page-size compatibility\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")\n' \
+              >> app/src/main/cpp/CMakeLists.txt
+          fi
 
       - name: Set up build-time Node.js
         uses: actions/setup-node@v4
