@@ -1,0 +1,119 @@
+name: Build Pura X APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths:
+      - "deepseek-harness-pura-x-mobile-v0.1.0-source.zip"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Expand uploaded source ZIP
+        run: |
+          test -f deepseek-harness-pura-x-mobile-v0.1.0-source.zip
+          rm -rf .build-src
+          mkdir -p .build-src
+          unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d .build-src
+          test -d .build-src/deepseek-harness-pura-x-mobile
+          mv .build-src/deepseek-harness-pura-x-mobile project
+          ls -la project
+
+      - name: Install Linux build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git python3 gcc-multilib g++-multilib \
+            rsync zip unzip ninja-build cmake
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK / NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1" \
+            "ndk;24.0.8215888"
+
+      - name: Checkout Node.js Mobile 24.5 Android branch
+        uses: actions/checkout@v4
+        with:
+          repository: ybaelli/nodejs-mobile
+          ref: 4608d3c670cf37b383dbe631de4992cf23da46e0
+          path: project/.deps/nodejs-mobile
+
+      - name: Build embedded Node.js 24.5.0 for arm64-v8a
+        working-directory: project/.deps/nodejs-mobile
+        run: |
+          ./tools/android_build.sh \
+            "$ANDROID_HOME/ndk/24.0.8215888" \
+            28 \
+            arm64
+
+      - name: Install libnode and headers into app
+        working-directory: project
+        run: |
+          bash ./scripts/install-node-mobile-artifacts.sh .deps/nodejs-mobile
+          ls -lh app/src/main/jniLibs/arm64-v8a/libnode.so
+
+      - name: Inspect libnode ELF alignment
+        working-directory: project
+        run: |
+          "$ANDROID_HOME/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+            -l app/src/main/jniLibs/arm64-v8a/libnode.so | grep -E "LOAD|Align" || true
+
+      - name: Set up build-time Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.5.0"
+
+      - name: Build embedded DeepSeek Harness runtime asset
+        working-directory: project
+        run: |
+          bash ./scripts/package-runtime.sh
+          ls -lh app/src/main/assets/dsh-runtime.zip
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build signed debug APK
+        working-directory: project
+        run: |
+          gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK contains arm64 libnode and runtime
+        working-directory: project
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | \
+            grep -E "lib/arm64-v8a/libnode.so|lib/arm64-v8a/libdsh_bridge.so|assets/dsh-runtime.zip"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepseek-harness-pura-x-debug-apk
+          path: project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
