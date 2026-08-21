@@ -4,6 +4,13 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 1 * * *'
+  push:
+    branches:
+      - master
+    paths:
+      - 'test.json'
+      - 'publisher.mjs'
+      - '.github/workflows/publish-wechat-draft.yml'
 
 jobs:
   publish:
