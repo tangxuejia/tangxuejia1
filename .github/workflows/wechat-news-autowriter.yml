@@ -1,0 +1,33 @@
+name: WeChat News Autowriter
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  write-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate WeChat draft
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+        run: node wechat-news/auto_writer.mjs
+
+      - name: Commit draft
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Add daily WeChat news draft"
+          file_pattern: "wechat-news/drafts/*.md"
