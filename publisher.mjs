@@ -195,7 +195,7 @@ async function requestJson(url, options, label) {
 }
 
 function createProxyAgent() {
-  const proxyUrl = cleanText(process.env.WECHAT_PROXY_URL);
+  const proxyUrl = normalizeProxyUrl(process.env.WECHAT_PROXY_URL);
 
   if (!proxyUrl) {
     return null;
@@ -208,6 +208,22 @@ function createProxyAgent() {
   }
 
   return new ProxyAgent(proxyUrl);
+}
+
+function normalizeProxyUrl(value) {
+  const raw = cleanText(value);
+
+  if (!raw) {
+    return '';
+  }
+
+  const curlProxy = raw.match(/--proxy\\s+(?:"([^"]+)"|'([^']+)'|([^\\s]+))/);
+
+  if (curlProxy) {
+    return (curlProxy[1] || curlProxy[2] || curlProxy[3]).trim();
+  }
+
+  return raw.replace(/^["']|["']$/g, '');
 }
 
 async function fetchWithProxy(url, options) {
