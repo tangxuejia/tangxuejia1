@@ -23,6 +23,7 @@ async function main() {
     console.log(`article_file=${articlePath}`);
     console.log(`title=${articlePayload.title}`);
     console.log(`content_chars=${articlePayload.content.length}`);
+    console.log(`inline_images=${articlePayload.inline_images.length}`);
     console.log(`needs_cover=${articlePayload.thumb_media_id ? 'no' : 'yes'}`);
     return;
   }
@@ -41,8 +42,16 @@ async function main() {
     process.env.WECHAT_THUMB_MEDIA_ID ||
     (await uploadDefaultThumb(accessToken));
 
+  const contentWithInlineImages = await uploadInlineImages(
+    accessToken,
+    articlePayload.content,
+    articlePayload.inline_images,
+  );
+
+  const { inline_images: inlineImages, ...draftArticle } = articlePayload;
   const draft = await addDraft(accessToken, {
-    ...articlePayload,
+    ...draftArticle,
+    content: contentWithInlineImages,
     thumb_media_id: thumbMediaId,
   });
 
@@ -80,6 +89,7 @@ function normalizeArticle(article) {
     author: cleanText(article.author),
     digest: cleanText(article.digest),
     content,
+    inline_images: normalizeInlineImages(article.inline_images),
     content_source_url: cleanText(article.content_source_url),
     thumb_media_id: cleanText(article.thumb_media_id),
     need_open_comment: Number.isInteger(article.need_open_comment) ? article.need_open_comment : 0,
@@ -107,6 +117,35 @@ function normalizeContent(content) {
     .split(/\n{2,}/)
     .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
     .join('\n');
+}
+
+
+function normalizeInlineImages(images) {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images.map((image, index) => {
+    if (!image || typeof image !== 'object') {
+      throw new Error(`inline_images[${index}] must be an object.`);
+    }
+
+    const id = cleanText(image.id);
+    const base64 = cleanBase64(image.base64);
+    const mime = cleanText(image.mime) || 'image/jpeg';
+    const filename = cleanText(image.filename) || `${id || `image-${index + 1}`}.jpg`;
+    const alt = cleanText(image.alt);
+
+    if (!id) {
+      throw new Error(`inline_images[${index}].id is required.`);
+    }
+
+    if (!base64) {
+      throw new Error(`inline_images[${index}].base64 is required.`);
+    }
+
+    return { id, base64, mime, filename, alt };
+  });
 }
 
 async function getAccessToken(appId, appSecret) {
@@ -147,6 +186,64 @@ async function uploadDefaultThumb(accessToken) {
 
   console.log(`thumb_media_id=${data.media_id}`);
   return data.media_id;
+}
+
+
+async function uploadInlineImages(accessToken, content, images) {
+  if (!images.length) {
+    return content;
+  }
+
+  let nextContent = content;
+
+  for (const image of images) {
+    const placeholder = `{{image:${image.id}}}`;
+
+    if (!nextContent.includes(placeholder)) {
+      throw new Error(`Missing inline image placeholder: ${placeholder}`);
+    }
+
+    const imageUrl = await uploadInlineImage(accessToken, image);
+    const imageHtml = inlineImageHtml(imageUrl, image.alt);
+    nextContent = nextContent.split(placeholder).join(imageHtml);
+    console.log(`inline_image_uploaded=${image.id}`);
+  }
+
+  return nextContent;
+}
+
+async function uploadInlineImage(accessToken, image) {
+  const url = new URL('/cgi-bin/media/uploadimg', WECHAT_API);
+  url.searchParams.set('access_token', accessToken);
+
+  const form = new FormData();
+  form.append('media', base64Blob(image.base64, image.mime), image.filename);
+
+  const data = await requestJson(
+    url,
+    {
+      method: 'POST',
+      body: form,
+    },
+    `upload_inline_image:${image.id}`,
+  );
+
+  if (!data.url) {
+    throw new Error(`WeChat did not return inline image url for ${image.id}: ${JSON.stringify(data)}`);
+  }
+
+  return data.url;
+}
+
+function inlineImageHtml(url, alt) {
+  const altText = escapeHtml(alt);
+  const src = escapeHtml(url);
+  return `<p style="text-align:center;margin:16px 0;"><img src="${src}" alt="${altText}" style="max-width:100%;height:auto;" /></p>`;
+}
+
+function base64Blob(base64, mime) {
+  const bytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+  return new Blob([bytes], { type: mime });
 }
 
 async function addDraft(accessToken, article) {
@@ -243,6 +340,7 @@ function wechatHint(errcode) {
   const hints = {
     40001: ' Hint: check WECHAT_APP_ID and WECHAT_APP_SECRET.',
     40007: ' Hint: thumb_media_id is invalid; use a permanent image/thumb material media_id.',
+    40113: ' Hint: image type unsupported; use standard JPG/PNG/GIF under WeChat limits.',
     40164:
       ' Hint: the runner IP is not in the WeChat Official Account IP allowlist. GitHub-hosted runners use changing outbound IPs. Set WECHAT_PROXY_URL to a fixed proxy, or use a self-hosted runner/fixed-IP server.',
     45009: ' Hint: WeChat API rate limit reached; retry later.',
@@ -268,6 +366,17 @@ function requireEnv(name) {
 
 function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function cleanBase64(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .trim()
+    .replace(/^data:[^;]+;base64,/, '')
+    .replace(/\s+/g, '');
 }
 
 function removeEmpty(object) {
