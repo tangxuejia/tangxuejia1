@@ -1,6 +1,6 @@
 # WeChat News Autowriter
 
-每天自动采集菲律宾新闻，生成一篇面向在菲律宾中国人的微信公众号菲语学习草稿。
+每天自动采集菲律宾新闻，生成一篇面向在菲律宾中国人的微信公众号菲语学习草稿。配置 Agnes API 后，正文用 Agnes 文本模型生成，封面图用 Agnes 图片模型生成；没有 API 时也会产出基础新闻采集草稿。
 
 ## 生成内容
 
@@ -13,14 +13,20 @@
 - 文中插图建议
 - 标签
 - 新闻来源链接
+- Agnes 封面图 URL 或封面提示词
 
 ## 使用方式
 
 1. 在 GitHub 仓库打开 `Settings -> Secrets and variables -> Actions`。
-2. 添加 Secret：`OPENAI_API_KEY`。
-3. 可选添加 Variable：`OPENAI_MODEL`，默认是 `gpt-4o-mini`。
-4. 打开 `Actions -> WeChat News Autowriter`。
-5. 点击 `Run workflow` 手动测试。
+2. 添加 Secret：`AGNES_API_KEY`，用于 Agnes 文本生成和封面图生成。
+3. 可选添加 Variable：`AGNES_TEXT_MODEL`，默认是 `agnes-2.5-flash`。
+4. 可选添加 Variable：`AGNES_IMAGE_MODEL`，默认是 `agnes-image-2.1-flash`。
+5. 可选添加 Secret：`OPENAI_API_KEY`，只作为 Agnes 文本失败时的备用。
+6. 可选添加 Variable：`OPENAI_MODEL`，默认是 `gpt-4o-mini`。
+7. 打开 `Actions -> WeChat News Autowriter`。
+8. 点击 `Run workflow` 手动测试。
+
+如果没有任何 API Key，workflow 仍会生成新闻采集草稿和封面提示词。
 
 workflow 默认每天马尼拉时间早上 8 点运行一次。生成结果会保存到：
 
