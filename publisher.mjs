@@ -202,12 +202,10 @@ function createProxyAgent() {
   }
 
   try {
-    new URL(proxyUrl);
+    return new ProxyAgent(proxyUrl);
   } catch (error) {
     throw new Error(`Invalid WECHAT_PROXY_URL: ${error.message}`);
   }
-
-  return new ProxyAgent(proxyUrl);
 }
 
 function normalizeProxyUrl(value) {
@@ -217,13 +215,20 @@ function normalizeProxyUrl(value) {
     return '';
   }
 
-  const curlProxy = raw.match(/--proxy\\s+(?:"([^"]+)"|'([^']+)'|([^\\s]+))/);
+  const curlProxy = raw.match(/--proxy\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))/);
+  const candidate = (curlProxy ? curlProxy[1] || curlProxy[2] || curlProxy[3] : raw)
+    .trim()
+    .replace(/^["']|["']$/g, '');
 
-  if (curlProxy) {
-    return (curlProxy[1] || curlProxy[2] || curlProxy[3]).trim();
+  try {
+    const url = new URL(candidate);
+    url.pathname = '';
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return candidate;
   }
-
-  return raw.replace(/^["']|["']$/g, '');
 }
 
 async function fetchWithProxy(url, options) {
