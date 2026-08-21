@@ -24,7 +24,8 @@ async function main() {
     console.log(`title=${articlePayload.title}`);
     console.log(`content_chars=${articlePayload.content.length}`);
     console.log(`inline_images=${articlePayload.inline_images.length}`);
-    console.log(`needs_cover=${articlePayload.thumb_media_id ? 'no' : 'yes'}`);
+    console.log(`needs_cover=${articlePayload.thumb_media_id || articlePayload.thumb_image ? 'no' : 'yes'}`);
+    console.log(`has_thumb_image=${articlePayload.thumb_image ? 'yes' : 'no'}`);
     return;
   }
 
@@ -40,7 +41,9 @@ async function main() {
   const thumbMediaId =
     articlePayload.thumb_media_id ||
     process.env.WECHAT_THUMB_MEDIA_ID ||
-    (await uploadDefaultThumb(accessToken));
+    (articlePayload.thumb_image
+      ? await uploadThumbImage(accessToken, articlePayload.thumb_image)
+      : await uploadDefaultThumb(accessToken));
 
   const contentWithInlineImages = await uploadInlineImages(
     accessToken,
@@ -48,7 +51,7 @@ async function main() {
     articlePayload.inline_images,
   );
 
-  const { inline_images: inlineImages, ...draftArticle } = articlePayload;
+  const { inline_images: inlineImages, thumb_image: thumbImage, ...draftArticle } = articlePayload;
   const draft = await addDraft(accessToken, {
     ...draftArticle,
     content: contentWithInlineImages,
@@ -90,6 +93,7 @@ function normalizeArticle(article) {
     digest: cleanText(article.digest),
     content,
     inline_images: normalizeInlineImages(article.inline_images),
+    thumb_image: normalizeThumbImage(article.thumb_image),
     content_source_url: cleanText(article.content_source_url),
     thumb_media_id: cleanText(article.thumb_media_id),
     need_open_comment: Number.isInteger(article.need_open_comment) ? article.need_open_comment : 0,
@@ -148,6 +152,27 @@ function normalizeInlineImages(images) {
   });
 }
 
+function normalizeThumbImage(image) {
+  if (!image) {
+    return null;
+  }
+
+  if (typeof image !== 'object') {
+    throw new Error('thumb_image must be an object.');
+  }
+
+  const base64 = cleanBase64(image.base64);
+  const mime = cleanText(image.mime) || 'image/jpeg';
+  const filename = cleanText(image.filename) || 'wechat-news-thumb.jpg';
+  const alt = cleanText(image.alt);
+
+  if (!base64) {
+    throw new Error('thumb_image.base64 is required.');
+  }
+
+  return { base64, mime, filename, alt };
+}
+
 async function getAccessToken(appId, appSecret) {
   const url = new URL('/cgi-bin/token', WECHAT_API);
   url.searchParams.set('grant_type', 'client_credential');
@@ -161,6 +186,32 @@ async function getAccessToken(appId, appSecret) {
   }
 
   return data.access_token;
+}
+
+async function uploadThumbImage(accessToken, image) {
+  const url = new URL('/cgi-bin/material/add_material', WECHAT_API);
+  url.searchParams.set('access_token', accessToken);
+  url.searchParams.set('type', 'thumb');
+
+  const form = new FormData();
+  form.append('media', base64Blob(image.base64, image.mime), image.filename);
+
+  const data = await requestJson(
+    url,
+    {
+      method: 'POST',
+      body: form,
+    },
+    'upload_thumb_image',
+  );
+
+  if (!data.media_id) {
+    throw new Error(`WeChat did not return thumb media_id: ${JSON.stringify(data)}`);
+  }
+
+  console.log(`thumb_image_uploaded=${image.filename}`);
+  console.log(`thumb_media_id=${data.media_id}`);
+  return data.media_id;
 }
 
 async function uploadDefaultThumb(accessToken) {
