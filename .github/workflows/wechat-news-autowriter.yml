@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
+  push:
+    branches:
+      - master
+    paths:
+      - "wechat-news/run-once.txt"
+      - ".github/workflows/wechat-news-autowriter.yml"
 
 permissions:
   contents: write
