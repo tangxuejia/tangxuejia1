@@ -1,5 +1,5 @@
 name: Publish WeChat Draft
-# publish trigger: 2026-08-21T10:00:00Z
+# publish trigger: 2026-08-21T10:21:30Z
 
 on:
   workflow_dispatch:
