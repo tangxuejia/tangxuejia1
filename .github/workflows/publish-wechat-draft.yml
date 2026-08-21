@@ -11,6 +11,8 @@ on:
     paths:
       - 'test.json'
       - 'publisher.mjs'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/publish-wechat-draft.yml'
 
 jobs:
@@ -39,4 +41,5 @@ jobs:
           WECHAT_APP_ID: wxd2cc750949b71b6e
           WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
           WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_THUMB_MEDIA_ID }}
+          WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
         run: node publisher.mjs test.json
