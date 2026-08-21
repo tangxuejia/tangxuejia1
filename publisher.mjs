@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 const WECHAT_API = 'https://api.weixin.qq.com';
 const DEFAULT_ARTICLE_PATH = 'articles/test.json';
@@ -6,6 +7,7 @@ const DEFAULT_ARTICLE_PATH = 'articles/test.json';
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const articlePath = args.find((arg) => !arg.startsWith('--')) ?? DEFAULT_ARTICLE_PATH;
+let proxyAgent = null;
 
 main().catch((error) => {
   console.error(`publisher_failed: ${error.message}`);
@@ -27,6 +29,11 @@ async function main() {
 
   const appId = requireEnv('WECHAT_APP_ID');
   const appSecret = requireEnv('WECHAT_APP_SECRET');
+  proxyAgent = createProxyAgent();
+
+  if (proxyAgent) {
+    console.log('wechat_proxy=enabled');
+  }
 
   const accessToken = await getAccessToken(appId, appSecret);
   const thumbMediaId =
@@ -166,7 +173,7 @@ async function addDraft(accessToken, article) {
 }
 
 async function requestJson(url, options, label) {
-  const response = await fetch(url, options);
+  const response = await fetchWithProxy(url, options);
   const text = await response.text();
   let data;
 
@@ -187,12 +194,36 @@ async function requestJson(url, options, label) {
   return data;
 }
 
+function createProxyAgent() {
+  const proxyUrl = cleanText(process.env.WECHAT_PROXY_URL);
+
+  if (!proxyUrl) {
+    return null;
+  }
+
+  try {
+    new URL(proxyUrl);
+  } catch (error) {
+    throw new Error(`Invalid WECHAT_PROXY_URL: ${error.message}`);
+  }
+
+  return new ProxyAgent(proxyUrl);
+}
+
+async function fetchWithProxy(url, options) {
+  if (!proxyAgent) {
+    return fetch(url, options);
+  }
+
+  return undiciFetch(url, { ...options, dispatcher: proxyAgent });
+}
+
 function wechatHint(errcode) {
   const hints = {
     40001: ' Hint: check WECHAT_APP_ID and WECHAT_APP_SECRET.',
     40007: ' Hint: thumb_media_id is invalid; use a permanent image/thumb material media_id.',
     40164:
-      ' Hint: the runner IP is not in the WeChat Official Account IP allowlist. GitHub-hosted runners use changing outbound IPs, so use a self-hosted runner or a fixed-IP server if this keeps happening.',
+      ' Hint: the runner IP is not in the WeChat Official Account IP allowlist. GitHub-hosted runners use changing outbound IPs. Set WECHAT_PROXY_URL to a fixed proxy, or use a self-hosted runner/fixed-IP server.',
     45009: ' Hint: WeChat API rate limit reached; retry later.',
   };
 
