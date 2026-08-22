@@ -1,0 +1,79 @@
+name: Daily Talk Tech Autowriter
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Candidate windows in Asia/Manila: 08:17, 10:43, 12:11, 14:37,
+    # 17:23, 19:49, 21:07, 22:53. The gate picks 5-8 of them each day.
+    - cron: "17 0 * * *"
+    - cron: "43 2 * * *"
+    - cron: "11 4 * * *"
+    - cron: "37 6 * * *"
+    - cron: "23 9 * * *"
+    - cron: "49 11 * * *"
+    - cron: "7 13 * * *"
+    - cron: "53 14 * * *"
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Decide whether this slot publishes
+        id: gate
+        env:
+          TECH_SCHEDULE: ${{ github.event.schedule }}
+          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node tech-news/slot_guard.mjs
+
+      - name: Show daily plan
+        run: |
+          echo "should_publish=${{ steps.gate.outputs.should_publish }}"
+          echo "daily_target=${{ steps.gate.outputs.daily_target }}"
+          echo "editorial_lane=${{ steps.gate.outputs.editorial_lane }}"
+          echo "article_index=${{ steps.gate.outputs.article_index }}"
+
+      - name: Install dependencies
+        if: steps.gate.outputs.should_publish == 'true'
+        run: npm ci
+
+      - name: Collect tech news, write article, generate Agnes images
+        if: steps.gate.outputs.should_publish == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
+          AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
+          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
+          TECH_EDITORIAL_LANE: ${{ steps.gate.outputs.editorial_lane }}
+          TECH_ARTICLE_INDEX: ${{ steps.gate.outputs.article_index }}
+          TECH_MANILA_DATE: ${{ steps.gate.outputs.manila_date }}
+        run: node tech-news/auto_writer.mjs
+
+      - name: Enforce Daily Talk layout and content QC
+        if: steps.gate.outputs.should_publish == 'true'
+        run: node tech-news/prepare_publish.mjs tech-news/output/daily.json
+
+      - name: Validate WeChat payload
+        if: steps.gate.outputs.should_publish == 'true'
+        run: node publisher.mjs tech-news/output/daily.json --dry-run
+
+      - name: Publish to Daily Talk draft box
+        if: steps.gate.outputs.should_publish == 'true'
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_DAILY_TALK_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_DAILY_TALK_APP_SECRET }}
+          WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_DAILY_TALK_THUMB_MEDIA_ID }}
+          WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
+        run: node publisher.mjs tech-news/output/daily.json
