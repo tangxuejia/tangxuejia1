@@ -19,6 +19,9 @@ on:
     - cron: "7 13 * * *"
     - cron: "53 14 * * *"
 
+permissions:
+  contents: write
+
 jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
@@ -82,3 +85,16 @@ jobs:
           WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_DAILY_TALK_THUMB_MEDIA_ID }}
           WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
         run: node publisher.mjs tech-news/output/daily.json
+
+      - name: Record workflow result
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          node tech-news/record_status.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tech-news/status/last-run.json
+          git diff --cached --quiet || git commit -m "chore: record Daily Talk run status"
+          git push
