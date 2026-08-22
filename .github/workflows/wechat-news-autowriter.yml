@@ -1,22 +1,23 @@
-name: WeChat News Autowriter
+name: WeChat News Autowriter V3
 
 on:
   workflow_dispatch:
   schedule:
+    # 08:00 Asia/Manila every day
     - cron: "0 0 * * *"
   push:
     branches:
       - master
     paths:
+      - "wechat-news/auto_writer.mjs"
       - "wechat-news/run-once.txt"
       - ".github/workflows/wechat-news-autowriter.yml"
 
-permissions:
-  contents: write
-
 jobs:
-  write-draft:
+  generate-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +26,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
 
-      - name: Generate WeChat draft
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect news, write article, generate Agnes images
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
@@ -36,8 +41,13 @@ jobs:
           AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
         run: node wechat-news/auto_writer.mjs
 
-      - name: Commit draft
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Add daily WeChat news draft"
-          file_pattern: "wechat-news/drafts/*.md"
+      - name: Validate generated WeChat article
+        run: node publisher.mjs wechat-news/output/daily.json --dry-run
+
+      - name: Publish to WeChat draft box
+        env:
+          WECHAT_APP_ID: wxd2cc750949b71b6e
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_THUMB_MEDIA_ID }}
+          WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
+        run: node publisher.mjs wechat-news/output/daily.json
