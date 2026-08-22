@@ -2,6 +2,11 @@ name: Daily Talk Tech Autowriter
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "tech-news/run-once.txt"
   schedule:
     # Candidate windows in Asia/Manila: 08:17, 10:43, 12:11, 14:37,
     # 17:23, 19:49, 21:07, 22:53. The gate picks 5-8 of them each day.
@@ -33,7 +38,7 @@ jobs:
         id: gate
         env:
           TECH_SCHEDULE: ${{ github.event.schedule }}
-          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' }}
+          FORCE_PUBLISH: ${{ github.event_name != 'schedule' }}
         run: node tech-news/slot_guard.mjs
 
       - name: Show daily plan
