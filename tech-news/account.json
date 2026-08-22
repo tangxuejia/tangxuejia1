@@ -8,7 +8,33 @@
   "cover": true,
   "inlineImages": 2,
   "style": "wechat-tech-conversational",
-  "positioning": "科技数码热点 + AI新鲜事 + 手机软件实用技巧 + 数码避坑 + 普通人看得懂的科技新闻",
+  "positioning": "面向中国用户的科技趋势号：全球科技变化 + AI + 数码产品 + 普通人看得懂的科技分析",
+  "newsFreshness": {
+    "priority": "24h",
+    "fallback": "72h",
+    "rejectOldNewsDays": 7
+  },
+  "hotTopicPriority": [
+    "AI与大模型",
+    "华为重大动态",
+    "手机与消费电子",
+    "芯片与硬件",
+    "智能汽车与机器人",
+    "全球科技趋势"
+  ],
+  "huaweiRadar": {
+    "enabled": true,
+    "mode": "high-priority-when-breaking",
+    "topics": [
+      "鸿蒙生态",
+      "Mate系列",
+      "P系列",
+      "折叠屏",
+      "华为汽车",
+      "芯片供应链",
+      "全球市场"
+    ]
+  },
   "editorialLanes": [
     "AI与大模型",
     "手机与消费电子",
@@ -19,6 +45,11 @@
     "智能汽车与机器人",
     "科技行业观察"
   ],
+  "growthRules": {
+    "needFollowReason": true,
+    "needInteractionQuestion": true,
+    "avoidHardSellFollow": true
+  },
   "scheduleSlotsManila": [
     "08:17",
     "10:43",
