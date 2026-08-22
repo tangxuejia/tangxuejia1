@@ -10,6 +10,8 @@ on:
       - master
     paths:
       - "wechat-news/auto_writer.mjs"
+      - "wechat-news/title_optimizer.mjs"
+      - "wechat-news/content_qc.mjs"
       - "wechat-news/prepare_publish.mjs"
       - "wechat-news/run-once.txt"
       - ".github/workflows/wechat-news-autowriter.yml"
@@ -41,6 +43,12 @@ jobs:
           AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
           AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
         run: node wechat-news/auto_writer.mjs
+
+      - name: Optimize title
+        run: node wechat-news/title_optimizer.mjs wechat-news/output/daily.json
+
+      - name: Run content quality check
+        run: node wechat-news/content_qc.mjs wechat-news/output/daily.json
 
       - name: Enforce V3 layout and emoji QC
         run: node wechat-news/prepare_publish.mjs wechat-news/output/daily.json
