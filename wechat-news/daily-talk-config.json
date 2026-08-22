@@ -1,0 +1,16 @@
+{
+  "project": "daily-talk",
+  "template": "tech-news",
+  "source": "wechat-news",
+  "sections": [
+    "AI趋势",
+    "科技数码",
+    "产品资讯",
+    "行业观察"
+  ],
+  "qc": {
+    "require_time": true,
+    "require_data": true,
+    "require_user_value": true
+  }
+}
