@@ -8,8 +8,6 @@ on:
     paths:
       - "tech-news/run-once.txt"
   schedule:
-    # Candidate windows in Asia/Manila: 08:17, 10:43, 12:11, 14:37,
-    # 17:23, 19:49, 21:07, 22:53. The gate picks 5-8 of them each day.
     - cron: "17 0 * * *"
     - cron: "43 2 * * *"
     - cron: "11 4 * * *"
@@ -26,10 +24,11 @@ jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,47 +36,37 @@ jobs:
           node-version: "24"
           cache: npm
 
-      - name: Decide whether this slot publishes
+      - name: Decide slot
         id: gate
         env:
           TECH_SCHEDULE: ${{ github.event.schedule }}
           FORCE_PUBLISH: ${{ github.event_name != 'schedule' }}
         run: node tech-news/slot_guard.mjs
 
-      - name: Show daily plan
-        run: |
-          echo "should_publish=${{ steps.gate.outputs.should_publish }}"
-          echo "daily_target=${{ steps.gate.outputs.daily_target }}"
-          echo "editorial_lane=${{ steps.gate.outputs.editorial_lane }}"
-          echo "article_index=${{ steps.gate.outputs.article_index }}"
-
       - name: Install dependencies
         if: steps.gate.outputs.should_publish == 'true'
         run: npm ci
 
-      - name: Collect tech news, write article, generate Agnes images
+      - name: Generate Daily Talk article
         if: steps.gate.outputs.should_publish == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
-          AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
-          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
           TECH_EDITORIAL_LANE: ${{ steps.gate.outputs.editorial_lane }}
           TECH_ARTICLE_INDEX: ${{ steps.gate.outputs.article_index }}
           TECH_MANILA_DATE: ${{ steps.gate.outputs.manila_date }}
         run: node tech-news/auto_writer.mjs
 
-      - name: Enforce Daily Talk layout and content QC
+      - name: QC
         if: steps.gate.outputs.should_publish == 'true'
         run: node tech-news/prepare_publish.mjs tech-news/output/daily.json
 
-      - name: Validate WeChat payload
+      - name: Dry run
         if: steps.gate.outputs.should_publish == 'true'
         run: node publisher.mjs tech-news/output/daily.json --dry-run
 
-      - name: Publish to Daily Talk draft box
+      - name: Publish draft
         if: steps.gate.outputs.should_publish == 'true'
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_DAILY_TALK_APP_ID }}
@@ -97,4 +86,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tech-news/status/last-run.json
           git diff --cached --quiet || git commit -m "chore: record Daily Talk run status"
-          git push
+          git fetch origin master
+          git rebase origin/master
+          git push origin HEAD:master
