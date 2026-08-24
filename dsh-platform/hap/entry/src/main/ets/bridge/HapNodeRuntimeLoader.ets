@@ -15,9 +15,6 @@ export class HapNodeRuntimeLoader {
     if (!processId) {
       return
     }
-    const process = await this.native.spawnLocalProcess('true', [])
-    if (process.id !== processId) {
-      await process.stop()
-    }
+    await this.native.stopEmbeddedNode(processId)
   }
 }
