@@ -1,0 +1,65 @@
+name: DSH Android APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "deepseek-harness-pura-x-mobile-v0.1.0-source.zip"
+      - ".github/workflows/dsh-apk-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract Android source package
+        run: mkdir -p prototype/imported && unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d prototype/imported
+      - name: Install build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK and NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;24.0.8215888"
+      - uses: actions/checkout@v4
+        with:
+          repository: ybaelli/nodejs-mobile
+          ref: 4608d3c670cf37b383dbe631de4992cf23da46e0
+          path: prototype/imported/.deps/nodejs-mobile
+      - name: Build embedded Node arm64
+        working-directory: prototype/imported/.deps/nodejs-mobile
+        run: ./tools/android_build.sh "$ANDROID_HOME/ndk/24.0.8215888" 28 arm64
+      - name: Install Node mobile artifacts
+        working-directory: prototype/imported
+        run: ./scripts/install-node-mobile-artifacts.sh .deps/nodejs-mobile
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.5.0"
+      - name: Package and verify Harness Runtime
+        working-directory: prototype/imported
+        run: |
+          ./scripts/package-runtime.sh
+          node scripts/verify-runtime.mjs build/runtime
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build debug APK
+        working-directory: prototype/imported
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Verify APK payload
+        working-directory: prototype/imported
+        run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "lib/arm64-v8a/libnode.so|lib/arm64-v8a/libdsh_bridge.so|assets/dsh-runtime.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deepseek-harness-pura-x-debug-apk
+          path: prototype/imported/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
