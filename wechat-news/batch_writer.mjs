@@ -4,7 +4,7 @@ import path from 'node:path';
 const key = process.env.AGNES_API_KEY || '';
 const base = (process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com').replace(/\/+$/, '');
 const model = process.env.AGNES_TEXT_MODEL || 'agnes-2.5-flash';
-const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash';
+const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.0-flash';
 const out = 'wechat-news/output';
 const date = '2026-08-24（菲律宾时间）'; // batch trigger 2026-08-24T20:00+08:00
 
@@ -51,11 +51,31 @@ function json(s){ const t=String(s).replace(/^\`\`\`json/i,'').replace(/\`\`\`$/
 
 async function img(prompt,id,ratio){
   if(!key) return null;
-  const r=await fetch(url('/v1/images/generations'),{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'application/json'},body:JSON.stringify({model:imageModel,prompt,size:'2K',ratio,extra_body:{response_format:'url'}})});
-  if(!r.ok) throw new Error('image '+r.status+' '+await r.text());
-  const u=(await r.json()).data?.[0]?.url; if(!u) throw new Error('no image url');
-  const d=await fetch(u); const b=Buffer.from(await d.arrayBuffer()); const mime=(d.headers.get('content-type')||'image/jpeg').split(';')[0];
-  return {id,filename:'tagalog-'+id+'.jpg',mime:'image/jpeg',alt:'',base64:b.toString('base64')};
+  const variants=[
+    {model:imageModel,prompt,size:'2K',ratio,extra_body:{response_format:'url'}},
+    {model:imageModel,prompt,size:'1024x1024'},
+    {model:imageModel,prompt}
+  ];
+  let last='';
+  for(let attempt=0;attempt<variants.length;attempt++){
+    try{
+      const r=await fetch(url('/v1/images/generations'),{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'application/json'},body:JSON.stringify(variants[attempt])});
+      const body=await r.text();
+      if(!r.ok){ last='HTTP '+r.status+' '+body.slice(0,300); continue; }
+      let data; try{ data=JSON.parse(body); }catch{ last='non-json response'; continue; }
+      const item=data.data?.[0]||{};
+      let b,mime='image/jpeg';
+      if(item.url){
+        const d=await fetch(item.url); if(!d.ok) throw new Error('image download '+d.status);
+        b=Buffer.from(await d.arrayBuffer()); mime=(d.headers.get('content-type')||mime).split(';')[0];
+      } else if(item.b64_json||item.base64){
+        b=Buffer.from(item.b64_json||item.base64,'base64');
+      } else { last='no url or base64 image returned: '+body.slice(0,300); continue; }
+      return {id,filename:'tagalog-'+id+'.jpg',mime,alt:'',base64:b.toString('base64')};
+    }catch(e){ last=e.message; }
+    await new Promise(r=>setTimeout(r,1500*(attempt+1)));
+  }
+  throw new Error('image generation failed for '+id+': '+last);
 }
 
 async function fallbackImages() {
