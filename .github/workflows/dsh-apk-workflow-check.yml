@@ -1,0 +1,20 @@
+name: DSH APK Workflow Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/dsh-apk-build.yml"
+      - "scripts/verify-apk-workflow.mjs"
+      - ".github/workflows/dsh-apk-workflow-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify APK workflow contract
+        run: node scripts/verify-apk-workflow.mjs
