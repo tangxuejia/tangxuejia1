@@ -81,7 +81,7 @@ async function one(n,i){
   ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(e.message); } }
   const h=(t)=>'<h2 style="margin:30px 0 14px;font-size:21px;line-height:1.45;color:#222;">'+t+'</h2>';
   const sources='<p style="color:#999;font-size:12px;">来源：<a href="'+n.url+'">'+esc(n.source)+'</a> · '+esc(n.time)+'</p>';
-  const content='<section style="font-size:16px;line-height:1.9;color:#262626;">{{image:cover}}<p style="color:#888;font-size:13px;">'+date+' · 菲语 Tagalog 新闻学习</p>'+h('🇵🇭 先看今天最关心的事')+a.top+h('🧳 在菲华人的行动清单')+a.checklist+'{{image:action}}'+h('🇵🇭 菲语学习：今天这样问')+a.language+'{{image:language}}'+h('🇨🇳 华人影响与提醒')+a.chinese+h('⏱ 30秒复习')+a.review+h('🏆 今日作业')+a.homework+sources+'<p style="color:#aaa;font-size:11px;">请以相关机构最新正式公告为准。</p></section>';
+  const content='<section style="font-size:16px;line-height:1.9;color:#262626;">{{image:cover}}<p style="color:#888;font-size:13px;">'+date+' · 菲语 Tagalog 新闻学习</p>'+h('🇵🇭 先看今天最关心的事')+a.top+h('🧳 在菲华人的行动清单')+a.checklist+'{{image:action}}'+h('🇵🇭 雨天上班/办事怎么问')+a.language+'{{image:language}}'+h('🇨🇳 中国人在菲证件最容易忽略的一点')+a.chinese+h('⏱ 30秒复习')+a.review+h('🏆 今日作业')+a.homework+sources+'<p style="color:#aaa;font-size:11px;">请以相关机构最新正式公告为准。</p></section>';
   return {title:String(a.title).slice(0,60),author:'菲语Tagalog学习',digest:String(a.digest).slice(0,110),content,inline_images:images,thumb_image:images.find(x=>x.id==='cover'),need_open_comment:1,only_fans_can_comment:0,project:'tagalog',date};
 }
 
