@@ -1,0 +1,29 @@
+{
+  "app": {
+    "signingConfigs": [],
+    "products": [
+      {
+        "name": "default",
+        " signingConfig": "default",
+        "compileSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "6.0.0(20)"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+        "buildMode": "debug"
+      },
+      {
+        "name": "release",
+        "buildMode": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry"
+    }
+  ]
+}
