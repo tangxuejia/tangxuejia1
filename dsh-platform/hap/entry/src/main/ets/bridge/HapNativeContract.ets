@@ -29,4 +29,5 @@ export interface HapNativeContract {
   createZip(sourcePath: string, targetPath: string): Promise<void>
   installRuntime(runtimeZipPath: string, runtimeRoot: string, version: string): Promise<void>
   startEmbeddedNode(argv: string[]): Promise<HapProcessHandle>
+  stopEmbeddedNode(processId: string): Promise<void>
 }
