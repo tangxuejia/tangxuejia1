@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 10
     env:
       npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
+      npm_config_fetch_timeout: 30000
+      npm_config_fetch_retries: 1
+      npm_config_audit: "false"
+      npm_config_fund: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +36,8 @@ jobs:
           node --version
           npm --version
           npm config get cache
+      - name: Install fixed TypeScript
+        run: npm install --global typescript@5.8.3 --no-audit --no-fund
       - name: TypeScript strict check
         working-directory: dsh-platform
-        run: npm exec --yes --package=typescript@5.8.3 -- tsc -p tsconfig.ci.json --noEmit --pretty false
+        run: tsc -p tsconfig.ci.json --noEmit --pretty false
