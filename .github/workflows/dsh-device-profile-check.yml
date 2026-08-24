@@ -1,0 +1,21 @@
+name: DSH Huawei Device Profile Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/device-layer/**"
+      - "dsh-platform/tests/device-profile-check.mjs"
+      - ".github/workflows/dsh-device-profile-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify phone tablet foldable desktop profiles
+        working-directory: dsh-platform/tests
+        run: node device-profile-check.mjs
