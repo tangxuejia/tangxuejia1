@@ -58,6 +58,24 @@ async function img(prompt,id,ratio){
   return {id,filename:'tagalog-'+id+'.jpg',mime:'image/jpeg',alt:'',base64:b.toString('base64')};
 }
 
+async function fallbackImages() {
+  try {
+    const raw = JSON.parse(await fs.readFile('test.json', 'utf8'));
+    const all = [
+      raw.thumb_image ? { ...raw.thumb_image, id: 'cover' } : null,
+      ...(Array.isArray(raw.inline_images) ? raw.inline_images : [])
+    ].filter(Boolean);
+    const by = new Map(all.map(x => [x.id, x]));
+    return [
+      by.get('cover'),
+      by.get('safety') ? { ...by.get('safety'), id: 'action' } : null,
+      by.get('worker') ? { ...by.get('worker'), id: 'language' } : null
+    ].filter(Boolean).map(x => ({ ...x, alt: '' }));
+  } catch {
+    return [];
+  }
+}
+
 function fallback(n){
   return {title:n.title,digest:n.data.slice(0,100),
     top:`<p><strong>新闻时间：</strong>${esc(n.time)}</p><p>${esc(n.data)}</p><p><strong>来源：</strong><a href="${n.url}">${esc(n.source)}</a></p>`,
@@ -79,6 +97,10 @@ async function one(n,i){
     ['action',common+' Practical scene showing Chinese residents or small businesses preparing for this news: phone, charger, documents, planning.','3:2'],
     ['language',common+' Friendly everyday conversation in the Philippines related to the news, realistic people, no text.','3:2']
   ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(e.message); } }
+  if (!images.some(x => x.id === 'cover') || images.length < 3) {
+    const fallback = await fallbackImages();
+    for (const x of fallback) if (!images.some(y => y.id === x.id)) images.push(x);
+  }
   const h=(t)=>'<h2 style="margin:30px 0 14px;font-size:21px;line-height:1.45;color:#222;">'+t+'</h2>';
   const sources='<p style="color:#999;font-size:12px;">来源：<a href="'+n.url+'">'+esc(n.source)+'</a> · '+esc(n.time)+'</p>';
   const content='<section style="font-size:16px;line-height:1.9;color:#262626;">{{image:cover}}<p style="color:#888;font-size:13px;">'+date+' · 菲语 Tagalog 新闻学习</p>'+h('🇵🇭 先看今天最关心的事')+a.top+h('🧳 在菲华人的行动清单')+a.checklist+'{{image:action}}'+h('🇵🇭 雨天上班/办事怎么问')+a.language+'{{image:language}}'+h('🇨🇳 中国人在菲证件最容易忽略的一点')+a.chinese+h('⏱ 30秒复习')+a.review+h('🏆 今日作业')+a.homework+sources+'<p style="color:#aaa;font-size:11px;">请以相关机构最新正式公告为准。</p></section>';
