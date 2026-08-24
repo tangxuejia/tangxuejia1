@@ -28,6 +28,11 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Run identity
+        run: |
+          echo "workflow=wechat-news-v3.5-batch"
+          echo "commit=$GITHUB_SHA"
+          date -u
       - name: Validate Agnes configuration
         env:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
