@@ -1,0 +1,35 @@
+name: DSH Platform CI
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/**"
+      - "scripts/**"
+      - "deepseek-harness-pura-x-mobile-v0.1.0-source.zip"
+      - ".github/workflows/dsh-platform-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Extract recovered Android source
+        run: mkdir -p prototype/imported && unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d prototype/imported
+      - name: DSH smoke and contract checks
+        working-directory: dsh-platform
+        run: |
+          node tests/smoke-check.mjs
+          node tests/contract-check.mjs
+          node tests/recovery-check.mjs
+      - name: Architecture boundary check
+        working-directory: dsh-platform
+        run: node ../scripts/check-boundaries.mjs
+      - name: Recovered build-chain check
+        run: node scripts/verify-build-chain.mjs prototype/imported
