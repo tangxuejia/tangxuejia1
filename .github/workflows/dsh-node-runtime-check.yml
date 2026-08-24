@@ -1,0 +1,23 @@
+name: DSH Node Runtime Target Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/runtime/node-runtime-selection.ts"
+      - "dsh-platform/hap/node-runtime-manifest.json"
+      - "dsh-platform/hap/entry/src/main/ets/bridge/**"
+      - "dsh-platform/tests/node-runtime-check.mjs"
+      - ".github/workflows/dsh-node-runtime-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Node Runtime target isolation
+        working-directory: dsh-platform/tests
+        run: node node-runtime-check.mjs
