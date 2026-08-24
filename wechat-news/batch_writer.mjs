@@ -66,14 +66,26 @@ async function img(prompt,id,ratio){
       const body=await r.text();
       if(!r.ok){ last='HTTP '+r.status+' '+body.slice(0,300); continue; }
       let data; try{ data=JSON.parse(body); }catch{ last='non-json response'; continue; }
-      const item=data.data?.[0]||{};
+      const root = data && typeof data === 'object' ? data : {};
+      const candidates = [
+        ...(Array.isArray(root.data) ? root.data : []),
+        ...(Array.isArray(root.images) ? root.images : []),
+        ...(Array.isArray(root.output) ? root.output : []),
+        root.data && !Array.isArray(root.data) ? root.data : null,
+        root.result && typeof root.result === 'object' ? root.result : null
+      ].filter(Boolean);
+      const item = candidates.find(x => x.url || x.b64_json || x.base64 || x.image_url || x.image) || {};
+      const imageUrl = item.url || item.image_url;
+      const imageBase64 = item.b64_json || item.base64 || item.image;
       let b,mime='image/jpeg';
-      if(item.url){
-        const d=await fetch(item.url); if(!d.ok) throw new Error('image download '+d.status);
+      if(imageUrl){
+        const d=await fetch(imageUrl); if(!d.ok) throw new Error('image download '+d.status);
         b=Buffer.from(await d.arrayBuffer()); mime=(d.headers.get('content-type')||mime).split(';')[0];
-      } else if(item.b64_json||item.base64){
-        b=Buffer.from(item.b64_json||item.base64,'base64');
-      } else { last='no url or base64 image returned: '+body.slice(0,300); continue; }
+      } else if(imageBase64){
+        const encoded = String(imageBase64).replace(/^data:image\\/[^;]+;base64,/,'');
+        b=Buffer.from(encoded,'base64');
+        if(String(imageBase64).startsWith('data:image/')) mime=String(imageBase64).match(/^data:([^;]+)/)?.[1] || mime;
+      } else { last='no usable image in response: '+body.slice(0,600); continue; }
       return {id,filename:'tagalog-'+id+'.jpg',mime,alt:'',base64:b.toString('base64')};
     }catch(e){ last=e.message; }
     await new Promise(r=>setTimeout(r,1500*(attempt+1)));
