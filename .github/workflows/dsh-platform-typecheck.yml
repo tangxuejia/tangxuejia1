@@ -21,9 +21,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
-      npm_config_fetch_timeout: 30000
-      npm_config_fetch_retries: 1
+      npm_config_fetch_timeout: "30000"
+      npm_config_fetch_retries: "1"
       npm_config_audit: "false"
       npm_config_fund: "false"
     steps:
@@ -32,12 +31,18 @@ jobs:
         with:
           node-version: 24
       - name: Inspect toolchain
+        env:
+          npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
         run: |
           node --version
           npm --version
           npm config get cache
-      - name: Install fixed TypeScript
-        run: npm install --global typescript@5.8.3 --no-audit --no-fund
+      - name: Install fixed TypeScript in runner temp
+        env:
+          npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
+        run: |
+          npm install --prefix "$RUNNER_TEMP/dsh-tools" typescript@5.8.3 --no-save --no-package-lock --no-audit --no-fund
+          echo "$RUNNER_TEMP/dsh-tools/node_modules/.bin" >> "$GITHUB_PATH"
       - name: TypeScript strict check
         working-directory: dsh-platform
         run: tsc -p tsconfig.ci.json --noEmit --pretty false
