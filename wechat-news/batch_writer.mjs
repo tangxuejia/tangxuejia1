@@ -50,7 +50,7 @@ async function text(prompt){
 function json(s){ const t=String(s).replace(/^\`\`\`json/i,'').replace(/\`\`\`$/,'').trim(); const a=t.indexOf('{'),b=t.lastIndexOf('}'); return JSON.parse(t.slice(a,b+1)); }
 
 async function img(prompt,id,ratio){
-  if(!key) return null;
+  if(!key) throw new Error('AGNES_API_KEY is missing; image generation cannot start.');
   const variants=[
     {model:imageModel,prompt,size:'2K',ratio,extra_body:{response_format:'url'}},
     {model:imageModel,prompt,size:'1024x1024'},
@@ -129,6 +129,9 @@ async function one(n,i){
   return {title:String(a.title).slice(0,60),author:'菲语Tagalog学习',digest:String(a.digest).slice(0,110),content,inline_images:images,thumb_image:images.find(x=>x.id==='cover'),need_open_comment:1,only_fans_can_comment:0,project:'tagalog',date};
 }
 
+console.log('agnes_base_url='+base);
+console.log('agnes_image_model='+imageModel);
+if(!key) throw new Error('AGNES_API_KEY is missing; add it to GitHub Actions Secrets.');
 await fs.mkdir(out,{recursive:true});
 const articles=[];
 for(let i=0;i<news.length;i++){ const a=await one(news[i],i); await fs.writeFile(path.join(out,'daily-'+(i+1)+'.json'),JSON.stringify(a,null,2)); articles.push({file:'daily-'+(i+1)+'.json',title:a.title,source:news[i].source}); }
