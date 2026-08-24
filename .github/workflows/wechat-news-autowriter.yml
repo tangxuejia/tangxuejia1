@@ -40,7 +40,7 @@ jobs:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
           AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
-          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.0-flash' }}
+          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
         run: node wechat-news/batch_writer.mjs
       - name: QC all 3 articles
         run: |
