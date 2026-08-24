@@ -41,7 +41,7 @@ jobs:
           test "$(node -e "console.log(require('./wechat-news/output/batch-manifest.json').count)")" = "3"
           for f in wechat-news/output/daily-1.json wechat-news/output/daily-2.json wechat-news/output/daily-3.json; do
             node wechat-news/prepare_publish.mjs "$f"
-            node -e "import('./wechat-news/content_qc.mjs').then(async m=>{const a=JSON.parse(require('fs').readFileSync(process.argv[1])); const r=m.qcArticle(a); if(!r.title||!r.structure||!r.emoji||!Array.isArray(a.inline_images)||!a.inline_images.length) process.exit(1); console.log(process.argv[1],r)})" "$f"
+            node -e "import('./wechat-news/content_qc.mjs').then(async m=>{const a=JSON.parse(require('fs').readFileSync(process.argv[1])); const r=m.qcArticle(a); if(!r.title||!r.structure||!Array.isArray(a.inline_images)||a.inline_images.length<3||!a.content.includes('{{image:cover}}')||!a.content.includes('{{image:action}}')||!a.content.includes('{{image:language}}')) process.exit(1); console.log(process.argv[1],r)})" "$f"
           done
       - name: Publish 3 drafts to WeChat
         env:
