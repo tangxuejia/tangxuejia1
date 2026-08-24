@@ -82,7 +82,7 @@ async function img(prompt,id,ratio){
         const d=await fetch(imageUrl); if(!d.ok) throw new Error('image download '+d.status);
         b=Buffer.from(await d.arrayBuffer()); mime=(d.headers.get('content-type')||mime).split(';')[0];
       } else if(imageBase64){
-        const encoded = String(imageBase64).replace(/^data:image\\/[^;]+;base64,/,'');
+        const encoded = String(imageBase64).replace(/^data:image[^;]+;base64,/,'');
         b=Buffer.from(encoded,'base64');
         if(String(imageBase64).startsWith('data:image/')) mime=String(imageBase64).match(/^data:([^;]+)/)?.[1] || mime;
       } else { last='no usable image in response: '+body.slice(0,600); continue; }
