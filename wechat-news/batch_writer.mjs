@@ -39,7 +39,10 @@ const news = [
 ];
 
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function url(p){ return base + (p.startsWith('/v1') ? p.slice(3) : p); }
+function url(p){
+  const path = p.startsWith('/v1') ? p : '/v1' + (p.startsWith('/') ? p : '/'+p);
+  return base.endsWith('/v1') ? base + path.slice(3) : base + path;
+}
 
 async function text(prompt){
   if(!key) return '';
