@@ -1,4 +1,5 @@
-import type { DeviceCapabilities, DeviceInfo, DeviceLayer, DeviceError, ProcessHandle } from "../dsh-core/contracts";
+import { DeviceError } from "../dsh-core/contracts";
+import type { DeviceCapabilities, DeviceInfo, DeviceLayer, ProcessHandle } from "../dsh-core/contracts";
 
 export interface HuaweiBridge {
   getInfo(): Promise<DeviceInfo>;
