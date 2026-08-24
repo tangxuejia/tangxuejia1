@@ -34,4 +34,4 @@ jobs:
           npm config get cache
       - name: TypeScript strict check
         working-directory: dsh-platform
-        run: npx --yes --package=typescript@5.8.3 tsc -p tsconfig.ci.json --noEmit --pretty false
+        run: npm exec --yes --package=typescript@5.8.3 -- tsc -p tsconfig.ci.json --noEmit --pretty false
