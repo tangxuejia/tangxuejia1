@@ -21,17 +21,11 @@ jobs:
       - name: Apply Android 16 KB page-size linker guard
         working-directory: prototype/imported
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("app/src/main/cpp/CMakeLists.txt")
-          text = path.read_text()
-          marker = "add_library(dsh_bridge SHARED dsh_bridge.cpp)"
-          guard = marker + '\n\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")'
-          if "max-page-size=16384" not in text:
-              if marker not in text:
-                  raise SystemExit("CMake bridge target not found")
-              path.write_text(text.replace(marker, guard, 1))
-          PY
+          CMAKE_FILE="app/src/main/cpp/CMakeLists.txt"
+          if ! grep -q "max-page-size=16384" "$CMAKE_FILE"; then
+            sed -i '/^add_library(dsh_bridge SHARED dsh_bridge.cpp)$/a target_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")' "$CMAKE_FILE"
+          fi
+          grep -q "max-page-size=16384" "$CMAKE_FILE"
       - name: Install build prerequisites
         run: sudo apt-get update && sudo apt-get install -y build-essential git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
       - uses: actions/setup-java@v4
