@@ -1,0 +1,8 @@
+{
+  "target": "openharmony-arm64",
+  "status": "pending-native-link",
+  "requiredNodeVersion": "24.5.0",
+  "architecture": "arm64",
+  "source": "Node Mobile/OpenHarmony native build",
+  "failClosed": true
+}
