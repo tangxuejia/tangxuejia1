@@ -31,17 +31,13 @@ jobs:
         with:
           node-version: 24
       - name: Inspect toolchain
-        env:
-          npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
         run: |
           node --version
           npm --version
-          npm config get cache
+          npm config get cache --cache "$RUNNER_TEMP/dsh-npm-cache"
       - name: Install fixed TypeScript in runner temp
-        env:
-          npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
         run: |
-          npm install --prefix "$RUNNER_TEMP/dsh-tools" typescript@5.8.3 --no-save --no-package-lock --no-audit --no-fund
+          npm install --prefix "$RUNNER_TEMP/dsh-tools" --cache "$RUNNER_TEMP/dsh-npm-cache" --fetch-timeout=30000 --fetch-retries=1 --no-save --no-package-lock --no-audit --no-fund typescript@5.8.3
           echo "$RUNNER_TEMP/dsh-tools/node_modules/.bin" >> "$GITHUB_PATH"
       - name: TypeScript strict check
         working-directory: dsh-platform
