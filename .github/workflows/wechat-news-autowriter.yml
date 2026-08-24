@@ -28,12 +28,19 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Validate Agnes configuration
+        env:
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+        run: |
+          set -e
+          if [ -z "$AGNES_API_KEY" ]; then echo "AGNES_API_KEY is missing or unavailable to this workflow"; exit 1; fi
+          echo "AGNES_API_KEY is present"
       - name: Generate exactly 3 Tagalog articles
         env:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
           AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
-          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
+          AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.0-flash' }}
         run: node wechat-news/batch_writer.mjs
       - name: QC all 3 articles
         run: |
