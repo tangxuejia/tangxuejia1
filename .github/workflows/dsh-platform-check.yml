@@ -1,0 +1,30 @@
+name: DSH Platform Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/**"
+      - "prototype/imported/**"
+      - "scripts/**"
+      - ".github/workflows/dsh-platform-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check DSH layers
+        working-directory: dsh-platform
+        run: node tests/smoke-check.mjs
+      - name: Check architecture boundaries
+        working-directory: dsh-platform
+        run: node ../scripts/check-boundaries.mjs
+      - name: Check recovered Android build chain
+        run: node scripts/verify-build-chain.mjs prototype/imported
