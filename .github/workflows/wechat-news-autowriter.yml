@@ -1,65 +1,55 @@
-name: WeChat News Autowriter V3
+name: WeChat News Autowriter V3.5 Batch
 
 on:
   workflow_dispatch:
   schedule:
-    # 08:00 Asia/Manila every day
     - cron: "0 0 * * *"
   push:
     branches:
       - master
     paths:
-      - "wechat-news/auto_writer.mjs"
-      - "wechat-news/title_optimizer.mjs"
-      - "wechat-news/content_qc.mjs"
+      - "wechat-news/batch_writer.mjs"
       - "wechat-news/prepare_publish.mjs"
-      - "wechat-news/run-once.txt"
+      - "wechat-news/content_qc.mjs"
+      - "wechat-news/output/run-once.txt"
       - ".github/workflows/wechat-news-autowriter.yml"
 
 jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
-
       - name: Install dependencies
         run: npm ci
-
-      - name: Collect news, write article, generate Agnes images
+      - name: Generate exactly 3 Tagalog articles
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
           AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
           AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
-        run: node wechat-news/auto_writer.mjs
-
-      - name: Optimize title
-        run: node wechat-news/title_optimizer.mjs wechat-news/output/daily.json
-
-      - name: Run content quality check
-        run: node wechat-news/content_qc.mjs wechat-news/output/daily.json
-
-      - name: Enforce V3 layout and emoji QC
-        run: node wechat-news/prepare_publish.mjs wechat-news/output/daily.json
-
-      - name: Validate generated WeChat article
-        run: node publisher.mjs wechat-news/output/daily.json --dry-run
-
-      - name: Publish to WeChat draft box
+        run: node wechat-news/batch_writer.mjs
+      - name: QC all 3 articles
+        run: |
+          set -e
+          test "$(node -e "console.log(require('./wechat-news/output/batch-manifest.json').count)")" = "3"
+          for f in wechat-news/output/daily-1.json wechat-news/output/daily-2.json wechat-news/output/daily-3.json; do
+            node wechat-news/prepare_publish.mjs "$f"
+            node -e "import('./wechat-news/content_qc.mjs').then(async m=>{const a=JSON.parse(require('fs').readFileSync(process.argv[1])); const r=m.qcArticle(a); if(!r.title||!r.structure||!r.emoji||!Array.isArray(a.inline_images)||!a.inline_images.length) process.exit(1); console.log(process.argv[1],r)})" "$f"
+          done
+      - name: Publish 3 drafts to WeChat
         env:
           WECHAT_APP_ID: wxd2cc750949b71b6e
           WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
-          WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_THUMB_MEDIA_ID }}
           WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
-        run: node publisher.mjs wechat-news/output/daily.json
+        run: |
+          set -e
+          for f in wechat-news/output/daily-1.json wechat-news/output/daily-2.json wechat-news/output/daily-3.json; do
+            node publisher.mjs "$f"
+          done
