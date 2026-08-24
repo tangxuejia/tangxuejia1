@@ -1,0 +1,9 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "huawei-dsh-hap",
+  "version": "0.1.0",
+  "description": "Huawei DSH Platform native HAP host",
+  "main": "",
+  "license": "MIT",
+  "dependencies": {}
+}
