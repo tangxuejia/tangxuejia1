@@ -21,7 +21,7 @@ jobs:
       - name: Apply Android runtime install compatibility
         working-directory: prototype/imported
         run: |
-          sed -i 's/npm install --omit=dev --no-audit --no-fund @deepseek-ai\\/dsh@0.1.0-rc.7/npm install --omit=dev --no-audit --no-fund --ignore-scripts @deepseek-ai\\/dsh@0.1.0-rc.7/' scripts/package-runtime.sh
+          sed -i 's/npm install --omit=dev --no-audit --no-fund @deepseek-ai\/dsh@0.1.0-rc.7/npm install --omit=dev --no-audit --no-fund --ignore-scripts @deepseek-ai\/dsh@0.1.0-rc.7/' scripts/package-runtime.sh
           grep -q -- '--ignore-scripts' scripts/package-runtime.sh
       - name: Apply Android 16 KB page-size linker guard
         working-directory: prototype/imported
