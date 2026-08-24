@@ -1,0 +1,24 @@
+name: DSH Platform Typecheck
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/**/*.ts"
+      - "dsh-platform/tsconfig.json"
+      - ".github/workflows/dsh-platform-typecheck.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: TypeScript strict check
+        working-directory: dsh-platform
+        run: npx --yes -p typescript@5.8.3 tsc --noEmit
