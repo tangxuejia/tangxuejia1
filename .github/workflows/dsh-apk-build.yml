@@ -23,6 +23,7 @@ jobs:
         run: |
           sed -i 's/npm install --omit=dev --no-audit --no-fund @deepseek-ai\/dsh@0.1.0-rc.7/npm install --omit=dev --no-audit --no-fund --ignore-scripts --legacy-peer-deps --no-package-lock @deepseek-ai\/dsh@0.1.0-rc.7 @deepseek-ai\/dsh-bash-local@0.1.0-rc.7 @deepseek-ai\/dsh-shell@0.1.0-rc.7 @deepseek-ai\/dsh-timeout@0.1.0-rc.7 @deepseek-ai\/dsh-settings@0.1.0-rc.7 @deepseek-ai\/dsh-invariants@0.1.0-rc.7 @deepseek-ai\/dsh-sandbox@0.1.0-rc.7 @deepseek-ai\/dsh-sandbox-policy@0.1.0-rc.7/' scripts/package-runtime.sh
           grep -q -- '--ignore-scripts' scripts/package-runtime.sh
+          grep -q -- '@deepseek-ai/dsh-bash-local@0.1.0-rc.7' scripts/package-runtime.sh
       - name: Apply Android 16 KB page-size linker guard
         working-directory: prototype/imported
         run: |
