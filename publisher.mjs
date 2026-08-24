@@ -15,48 +15,52 @@ main().catch((error) => {
 });
 
 async function main() {
-  const article = await loadArticle(articlePath);
-  const articlePayload = normalizeArticle(article);
+  const articlePayloads = articlePath.endsWith('batch-manifest.json')
+    ? await loadBatchArticles(articlePath)
+    : [normalizeArticle(await loadArticle(articlePath))];
 
   if (dryRun) {
     console.log('dry_run_ok');
     console.log(`article_file=${articlePath}`);
-    console.log(`title=${articlePayload.title}`);
-    console.log(`content_chars=${articlePayload.content.length}`);
-    console.log(`inline_images=${articlePayload.inline_images.length}`);
-    console.log(`needs_cover=${articlePayload.inline_images[0] ? 'no' : 'yes'}`);
-    console.log(`cover_source=${articlePayload.inline_images[0] ? 'first_inline_image' : 'fallback'}`);
+    console.log(`article_count=${articlePayloads.length}`);
+    for (const [index, article] of articlePayloads.entries()) {
+      console.log(`article_${index + 1}_title=${article.title}`);
+      console.log(`article_${index + 1}_content_chars=${article.content.length}`);
+      console.log(`article_${index + 1}_inline_images=${article.inline_images.length}`);
+    }
     return;
   }
 
   const appId = requireEnv('WECHAT_APP_ID');
   const appSecret = requireEnv('WECHAT_APP_SECRET');
   proxyAgent = createProxyAgent();
-
-  if (proxyAgent) {
-    console.log('wechat_proxy=enabled');
-  }
+  if (proxyAgent) console.log('wechat_proxy=enabled');
 
   const accessToken = await getAccessToken(appId, appSecret);
-  const coverImage = articlePayload.inline_images[0] || articlePayload.thumb_image;
-  const thumbMediaId = coverImage
-    ? await uploadThumbImage(accessToken, coverImage)
-    : await uploadDefaultThumb(accessToken);
+  const draftArticles = [];
 
-  const contentWithInlineImages = await uploadInlineImages(
-    accessToken,
-    articlePayload.content,
-    articlePayload.inline_images,
-  );
+  for (const [index, articlePayload] of articlePayloads.entries()) {
+    const coverImage = articlePayload.inline_images[0] || articlePayload.thumb_image;
+    const thumbMediaId = coverImage
+      ? await uploadThumbImage(accessToken, coverImage)
+      : await uploadDefaultThumb(accessToken);
+    const contentWithInlineImages = await uploadInlineImages(
+      accessToken,
+      articlePayload.content,
+      articlePayload.inline_images,
+    );
+    const { inline_images: inlineImages, thumb_image: thumbImage, ...draftArticle } = articlePayload;
+    draftArticles.push({
+      ...draftArticle,
+      content: contentWithInlineImages,
+      thumb_media_id: thumbMediaId,
+    });
+    console.log(`article_prepared=${index + 1}/${articlePayloads.length}`);
+  }
 
-  const { inline_images: inlineImages, thumb_image: thumbImage, ...draftArticle } = articlePayload;
-  const draft = await addDraft(accessToken, {
-    ...draftArticle,
-    content: contentWithInlineImages,
-    thumb_media_id: thumbMediaId,
-  });
-
+  const draft = await addDraft(accessToken, draftArticles);
   console.log(`draft_media_id=${draft.media_id}`);
+  console.log(`draft_article_count=${draftArticles.length}`);
   console.log('publish_status=success');
 }
 
@@ -67,6 +71,18 @@ async function loadArticle(path) {
   } catch (error) {
     throw new Error(`Invalid JSON in ${path}: ${error.message}`);
   }
+}
+
+async function loadBatchArticles(manifestPath) {
+  const manifest = await loadArticle(manifestPath);
+  if (!manifest || manifest.count !== 3 || !Array.isArray(manifest.articles) || manifest.articles.length !== 3) {
+    throw new Error('Batch manifest must contain exactly 3 articles.');
+  }
+  const baseDir = manifestPath.slice(0, manifestPath.lastIndexOf('/') + 1);
+  return Promise.all(manifest.articles.map(async (item) => {
+    if (!item?.file) throw new Error('Batch manifest article file is missing.');
+    return normalizeArticle(await loadArticle(baseDir + item.file));
+  }));
 }
 
 function normalizeArticle(article) {
@@ -306,7 +322,7 @@ async function addDraft(accessToken, article) {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ articles: [article] }),
+      body: JSON.stringify({ articles: Array.isArray(article) ? article : [article] }),
     },
     'add_draft',
   );
