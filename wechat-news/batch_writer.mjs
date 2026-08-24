@@ -4,7 +4,7 @@ import path from 'node:path';
 const key = process.env.AGNES_API_KEY || '';
 const base = (process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com').replace(/\/+$/, '');
 const model = process.env.AGNES_TEXT_MODEL || 'agnes-2.5-flash';
-const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.0-flash';
+const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash';
 const out = 'wechat-news/output';
 const date = '2026-08-24（菲律宾时间）'; // batch trigger 2026-08-24T20:00+08:00
 
@@ -119,9 +119,9 @@ async function one(n,i){
     ['cover',common+' Wide WeChat cover image about '+n.title+'; Filipino city or business environment, clear focal point.','21:9'],
     ['action',common+' Specific action scene showing the practical response to this exact story, including the relevant Philippine location, equipment, infrastructure, or business context. Chinese residents or businesses should appear only when relevant.','3:2'],
     ['language',common+' Specific everyday conversation scene directly related to this exact story; show the relevant object or setting from the news, realistic Filipino people, no text.','3:2']
-  ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(e.message); } }
+  ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(`image_failed topic=${n.id} image=${id}: ${e.message}`); } }
   if (!images.some(x => x.id === 'cover') || images.length < 3) {
-    throw new Error(`Topic-specific images failed for ${n.id}; refusing to publish mismatched fallback images.`);
+    throw new Error(`Topic-specific images failed for ${n.id}; model=${imageModel}; endpoint=${base}; check the preceding image generation error logs.`);
   }
   const h=(t)=>'<h2 style="margin:30px 0 14px;font-size:21px;line-height:1.45;color:#222;">'+t+'</h2>';
   const sources='<p style="color:#999;font-size:12px;">来源：<a href="'+n.url+'">'+esc(n.source)+'</a> · '+esc(n.time)+'</p>';
