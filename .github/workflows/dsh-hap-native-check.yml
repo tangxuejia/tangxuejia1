@@ -1,0 +1,21 @@
+name: DSH HAP Native Boundary Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/hap/entry/src/main/cpp/**"
+      - "dsh-platform/hap/entry/src/main/ets/bridge/**"
+      - "scripts/verify-hap-native-boundary.mjs"
+      - ".github/workflows/dsh-hap-native-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify HAP native bridge boundary
+        run: node scripts/verify-hap-native-boundary.mjs
