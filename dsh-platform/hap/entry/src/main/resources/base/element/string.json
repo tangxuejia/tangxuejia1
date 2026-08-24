@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "Huawei DSH"
+    },
+    {
+      "name": "entry_desc",
+      "value": "Huawei DSH local Harness host"
+    }
+  ]
+}
