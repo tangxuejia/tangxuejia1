@@ -66,10 +66,13 @@ async function fallbackImages() {
       ...(Array.isArray(raw.inline_images) ? raw.inline_images : [])
     ].filter(Boolean);
     const by = new Map(all.map(x => [x.id, x]));
+    const cover = by.get('cover') || all[0];
+    const action = by.get('safety') || by.get('worker') || cover;
+    const language = by.get('worker') || by.get('permit') || cover;
     return [
-      by.get('cover'),
-      by.get('safety') ? { ...by.get('safety'), id: 'action' } : null,
-      by.get('worker') ? { ...by.get('worker'), id: 'language' } : null
+      cover ? { ...cover, id: 'cover' } : null,
+      action ? { ...action, id: 'action' } : null,
+      language ? { ...language, id: 'language' } : null
     ].filter(Boolean).map(x => ({ ...x, alt: '' }));
   } catch {
     return [];
