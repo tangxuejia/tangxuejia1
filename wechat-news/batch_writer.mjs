@@ -6,7 +6,7 @@ const base = (process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com').repla
 const model = process.env.AGNES_TEXT_MODEL || 'agnes-2.5-flash';
 const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash';
 const out = 'wechat-news/output';
-const date = '2026-08-24（菲律宾时间）';
+const date = '2026-08-24（菲律宾时间）'; // batch trigger 2026-08-24T20:00+08:00
 
 const news = [
   {
