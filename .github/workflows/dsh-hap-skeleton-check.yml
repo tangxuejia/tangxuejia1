@@ -1,0 +1,20 @@
+name: DSH HAP Skeleton Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/hap/**"
+      - "scripts/verify-hap-skeleton.mjs"
+      - ".github/workflows/dsh-hap-skeleton-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify DevEco HAP skeleton
+        run: node scripts/verify-hap-skeleton.mjs dsh-platform/hap
