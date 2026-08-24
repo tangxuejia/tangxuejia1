@@ -1,0 +1,22 @@
+name: DSH Platform Recovery Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/runtime/**"
+      - "dsh-platform/ui/**"
+      - "dsh-platform/tests/recovery-check.mjs"
+      - ".github/workflows/dsh-platform-recovery-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify restart and cleanup behavior
+        working-directory: dsh-platform/tests
+        run: node recovery-check.mjs
