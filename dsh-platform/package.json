@@ -1,0 +1,10 @@
+{
+  "name": "huawei-dsh-platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check:boundaries": "node ../scripts/check-boundaries.mjs",
+    "verify:build-chain": "node ../scripts/verify-build-chain.mjs ../prototype/imported"
+  }
+}
