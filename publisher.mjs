@@ -24,8 +24,8 @@ async function main() {
     console.log(`title=${articlePayload.title}`);
     console.log(`content_chars=${articlePayload.content.length}`);
     console.log(`inline_images=${articlePayload.inline_images.length}`);
-    console.log(`needs_cover=${articlePayload.thumb_media_id || articlePayload.thumb_image ? 'no' : 'yes'}`);
-    console.log(`has_thumb_image=${articlePayload.thumb_image ? 'yes' : 'no'}`);
+    console.log(`needs_cover=${articlePayload.inline_images[0] ? 'no' : 'yes'}`);
+    console.log(`cover_source=${articlePayload.inline_images[0] ? 'first_inline_image' : 'fallback'}`);
     return;
   }
 
@@ -38,12 +38,10 @@ async function main() {
   }
 
   const accessToken = await getAccessToken(appId, appSecret);
-  const thumbMediaId =
-    articlePayload.thumb_media_id ||
-    process.env.WECHAT_THUMB_MEDIA_ID ||
-    (articlePayload.thumb_image
-      ? await uploadThumbImage(accessToken, articlePayload.thumb_image)
-      : await uploadDefaultThumb(accessToken));
+  const coverImage = articlePayload.inline_images[0] || articlePayload.thumb_image;
+  const thumbMediaId = coverImage
+    ? await uploadThumbImage(accessToken, coverImage)
+    : await uploadDefaultThumb(accessToken);
 
   const contentWithInlineImages = await uploadInlineImages(
     accessToken,
