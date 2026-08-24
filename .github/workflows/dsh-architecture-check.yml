@@ -1,0 +1,29 @@
+name: DSH Architecture Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-core/**"
+      - "device-layer/**"
+      - "runtime/**"
+      - "ui/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package.json"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify DSH build chain
+        run: node scripts/verify-build-chain.mjs prototype/imported
+      - name: Verify architecture boundaries
+        run: node scripts/check-boundaries.mjs
