@@ -1,0 +1,20 @@
+name: DSH Platform Contract Check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "dsh-platform/**"
+      - ".github/workflows/dsh-platform-contract-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run contract smoke test
+        working-directory: dsh-platform/tests
+        run: node contract-check.mjs
