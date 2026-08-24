@@ -20,14 +20,18 @@ jobs:
   typecheck:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      npm_config_cache: ${{ runner.temp }}/dsh-npm-cache
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install TypeScript
-        working-directory: dsh-platform
-        run: npm install --no-save --no-package-lock --ignore-scripts typescript@5.8.3
+      - name: Inspect toolchain
+        run: |
+          node --version
+          npm --version
+          npm config get cache
       - name: TypeScript strict check
         working-directory: dsh-platform
-        run: ./node_modules/.bin/tsc -p tsconfig.ci.json --noEmit
+        run: npx --yes --package=typescript@5.8.3 tsc -p tsconfig.ci.json --noEmit --pretty false
