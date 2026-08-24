@@ -93,16 +93,15 @@ async function one(n,i){
   const prompt=`今天是${date}。请把下面这条英文/菲律宾新闻材料翻译、整理成面向在菲华人的中文微信公众号文章。必须保留：新闻时间、来源链接、可核实数据、华人影响；自然加入3-5句实用Tagalog/Taglish和中文解释。不要写普通天气，不得补造事实。每段1-3句，像真实生活资讯，不要AI腔。只输出JSON字段：title,digest,top,checklist,language,chinese,review,homework。top必须包含时间/来源/数据；checklist必须包含华人行动建议；language必须包含菲语学习；chinese必须包含华人影响。\n\n新闻：${JSON.stringify(n)}`;
   let a; try { a=json(await text(prompt)); } catch(e){ console.warn(e.message); }
   a=a&&a.title&&a.top?a:fallback(n);
-  const common='Realistic editorial documentary photography in the Philippines, authentic local setting, natural light, no readable text, no logo, no watermark.';
+  const common='Realistic editorial documentary photography in the Philippines, authentic local setting, natural light, no readable text, no logo, no watermark. The image must directly match this exact news story: '+n.title+'. Story facts: '+n.data+' Audience relevance: '+n.impact+' Do not depict unrelated weather, paperwork, schools, or generic business scenes.';
   const images=[];
   for(const [id,p,ratio] of [
     ['cover',common+' Wide WeChat cover image about '+n.title+'; Filipino city or business environment, clear focal point.','21:9'],
-    ['action',common+' Practical scene showing Chinese residents or small businesses preparing for this news: phone, charger, documents, planning.','3:2'],
-    ['language',common+' Friendly everyday conversation in the Philippines related to the news, realistic people, no text.','3:2']
+    ['action',common+' Specific action scene showing the practical response to this exact story, including the relevant Philippine location, equipment, infrastructure, or business context. Chinese residents or businesses should appear only when relevant.','3:2'],
+    ['language',common+' Specific everyday conversation scene directly related to this exact story; show the relevant object or setting from the news, realistic Filipino people, no text.','3:2']
   ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(e.message); } }
   if (!images.some(x => x.id === 'cover') || images.length < 3) {
-    const fallback = await fallbackImages();
-    for (const x of fallback) if (!images.some(y => y.id === x.id)) images.push(x);
+    throw new Error(`Topic-specific images failed for ${n.id}; refusing to publish mismatched fallback images.`);
   }
   const h=(t)=>'<h2 style="margin:30px 0 14px;font-size:21px;line-height:1.45;color:#222;">'+t+'</h2>';
   const sources='<p style="color:#999;font-size:12px;">来源：<a href="'+n.url+'">'+esc(n.source)+'</a> · '+esc(n.time)+'</p>';
