@@ -6,35 +6,35 @@ const base = (process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com').repla
 const model = process.env.AGNES_TEXT_MODEL || 'agnes-2.5-flash';
 const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash';
 const out = 'wechat-news/output';
-const date = '2026-08-24（菲律宾时间）'; // batch trigger 2026-08-24T20:00+08:00
+const date = '2026-08-25（菲律宾时间）'; // batch trigger 2026-08-25T00:00+08:00
 
 const news = [
   {
-    id:'visayas-grid-alert',
-    title:'维萨亚斯电网今日发布红色与黄色预警',
-    time:'2026年8月24日，ABS-CBN News 11:16（菲律宾时间）',
-    source:'ABS-CBN News',
-    url:'https://www.abs-cbn.com/news/business/2026/8/24/visayas-grid-on-red-yellow-alerts-on-august-24-1116',
-    data:'国家电网公司（NGCP）表示，维萨亚斯电网当天面临 Red Alert 与 Yellow Alert；公开报道指出，部分燃煤电厂停运是背景之一。具体停电区域和时段仍以当地电力公司公告为准。',
-    impact:'在宿务、伊洛伊洛、薄荷、莱特等维萨亚斯地区生活或经营的华人，应提前给手机、收银设备、路由器和备用电源充电；餐饮、冷链、网店仓储要注意短时断电风险。'
+    id:'obet-super-typhoon',
+    title:'台风Obet可能增强为超强台风，菲律宾进入重点防范期',
+    time:'2026年8月25日，Philstar.com（菲律宾时间）',
+    source:'The Philippine Star',
+    url:'https://www.philstar.com/headlines/2026/08/24/2551352/obet-may-turn-super-typhoon/',
+    data:'报道援引PAGASA信息称，国际名Saudel的热带气旋预计进入菲律宾责任区后命名为Obet，中心曾位于吕宋岛最北端以东约1,950公里，最大风速165公里/小时、阵风205公里/小时，并可能增强为超强台风；其停留时间预计较短，但可能增强西南季风。',
+    impact:'在吕宋、马尼拉及西部受季风影响地区生活和经营的华人，要提前检查航班、海运、门店排水、备用电源和手机通知；不要只看“是否直接登陆”，还要关注季风带来的持续降雨和交通影响。'
   },
   {
-    id:'ai-data-foundation',
-    title:'世界银行提醒：菲律宾AI发展不能缺数据基础',
-    time:'2026年8月24日，Manila Bulletin 00:00（菲律宾时间）',
-    source:'Manila Bulletin',
-    url:'https://mb.com.ph/2026/08/24/weak-data-foundations-could-hold-back-philippine-ai-push-world-bank-warns',
-    data:'报道援引世界银行观点称，菲律宾推进人工智能时，数据质量、数据治理和基础设施仍是关键短板；这不是单纯购买软件或模型就能解决的问题。',
-    impact:'做BPO、跨境电商、客服、广告和软件外包的华人团队，未来会更看重数据合规、客户资料保护和员工使用AI的流程；不要把客户身份证、订单和支付资料随意上传到公开工具。'
+    id:'school-safety-drill',
+    title:'菲律宾全国学校今天举行安全演练，家长要先看接送安排',
+    time:'2026年8月25日，Philstar.com报道（菲律宾时间）',
+    source:'Philstar.com',
+    url:'https://www.philstar.com/headlines/2026/08/21/2550825/deped-sets-nationwide-school-safety-drill-campus-threats-august-25',
+    data:'菲律宾教育部要求学校在8月25日上午9时开展全国同步校园安全演练，内容依据各校针对校园攻击事件的应急计划；学校还需准备安全房、疏散路线、紧急沟通和家属集合区域，并邀请地方政府、警察或消防等外部人员评估。',
+    impact:'有孩子在菲律宾上学的华人家庭，今天要提前确认学校是否调整入校、放学和接送流程，保存班主任或学校的紧急联系方式；演练期间应听从校方安排，不把演练消息当成正在发生的袭击。'
   },
   {
-    id:'renewables-data-centers',
-    title:'可再生能源和数据中心成菲律宾吸引外资新重点',
-    time:'2026年8月24日，Manila Bulletin 00:01（菲律宾时间）',
-    source:'Manila Bulletin',
-    url:'https://mb.com.ph/2026/08/24/renewables-data-centers-thriving-fdi-big-bets-for-philippines',
-    data:'报道将可再生能源与数据中心列为菲律宾外商直接投资的重点方向，反映出电力、云服务和数字基础设施正在成为新的投资竞争领域。',
-    impact:'对在菲做电商、物流、云服务、软件和工商业用电项目的华人来说，长期电价、供电稳定性、机房位置和地方许可会越来越重要；看项目不能只看租金和人工成本。'
+    id:'special-nonworking-days',
+    title:'菲律宾3个市镇获宣布特别非工作日，办事和物流要提前确认',
+    time:'2026年8月25日，Inquirer.net报道（菲律宾时间）',
+    source:'INQUIRER.net',
+    url:'https://newsinfo.inquirer.net/2289459/marcos-declares-special-non-working-days-in-3-municipalities',
+    data:'总统府公布的公告安排了3个地方特别非工作日：Quezon省Buenavista为8月26日，Cagayan省Alcala为8月27日，Sultan Kudarat省Isulan为8月28日；相关安排与地方成立纪念日或节庆活动有关。',
+    impact:'在这些地方有门店、仓库、员工、客户或政府手续的华人企业，要提前确认银行、地方政府窗口、快递和货运是否调整营业时间；不要把地方特别非工作日误认为全国放假。'
   }
 ];
 
