@@ -21,7 +21,7 @@ jobs:
       - name: Apply Android runtime install compatibility
         working-directory: prototype/imported
         run: |
-          sed -i 's/npm install --omit=dev --no-audit --no-fund @deepseek-ai\/dsh@0.1.0-rc.7/npm install --omit=dev --no-audit --no-fund --ignore-scripts @deepseek-ai\/dsh@0.1.0-rc.7/' scripts/package-runtime.sh
+          sed -i 's/npm install --omit=dev --no-audit --no-fund @deepseek-ai\/dsh@0.1.0-rc.7/npm install --omit=dev --no-audit --no-fund --ignore-scripts --legacy-peer-deps --no-package-lock @deepseek-ai\/dsh@0.1.0-rc.7/' scripts/package-runtime.sh
           grep -q -- '--ignore-scripts' scripts/package-runtime.sh
       - name: Apply Android 16 KB page-size linker guard
         working-directory: prototype/imported
@@ -62,7 +62,8 @@ jobs:
           NPM_CONFIG_CACHE: /tmp/dsh-npm-cache
           NPM_CONFIG_FETCH_TIMEOUT: "120000"
           NPM_CONFIG_FETCH_RETRIES: "2"
-          NPM_CONFIG_PREFER_OFFLINE: "true"
+          NPM_CONFIG_PREFER_OFFLINE: "false"
+          NODE_OPTIONS: "--max-old-space-size=4096"
           NPM_CONFIG_PROGRESS: "false"
           NPM_CONFIG_AUDIT: "false"
           NPM_CONFIG_FUND: "false"
