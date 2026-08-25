@@ -1,10 +1,10 @@
 {
   "workflow": "Daily Talk Tech Autowriter",
   "status": "failure",
-  "run_id": "32856681520",
+  "run_id": "32866088075",
   "run_attempt": "1",
   "event_name": "schedule",
   "ref": "refs/heads/master",
-  "sha": "51c6d134ea0af7b8cfb778d7e7eff2d335050e56",
-  "updated_at": "2026-08-25T14:01:08.427Z"
+  "sha": "8164f9800166084b99385f137d0ee426fc171f63",
+  "updated_at": "2026-08-25T15:30:52.792Z"
 }
