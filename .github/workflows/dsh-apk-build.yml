@@ -23,9 +23,9 @@ jobs:
         run: |
           CMAKE_FILE="app/src/main/cpp/CMakeLists.txt"
           if ! grep -q "max-page-size=16384" "$CMAKE_FILE"; then
-            sed -i '/^add_library(dsh_bridge SHARED dsh_bridge.cpp)$/a target_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")' "$CMAKE_FILE"
+            printf '\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")\n' >> "$CMAKE_FILE"
           fi
-          grep -q "max-page-size=16384" "$CMAKE_FILE"
+          grep -n "max-page-size=16384" "$CMAKE_FILE"
       - name: Install build prerequisites
         run: sudo apt-get update && sudo apt-get install -y build-essential git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
       - uses: actions/setup-java@v4
