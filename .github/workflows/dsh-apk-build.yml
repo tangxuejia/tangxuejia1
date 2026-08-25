@@ -37,7 +37,7 @@ jobs:
           fi
           grep -n "max-page-size=16384" "$CMAKE_FILE"
       - name: Install build prerequisites
-        run: sudo apt-get update && sudo apt-get install -y build-essential git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
+        run: sudo apt-get update && sudo apt-get install -y build-essential clang git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -60,21 +60,16 @@ jobs:
             sed -i '1i#include <vector>' deps/ncrypto/ncrypto.cc
           fi
           grep -nF '#include <vector>' deps/ncrypto/ncrypto.cc
-      - name: Pin Node mobile host compiler to NDK libc++
+      - name: Configure Node mobile host compiler with system C++20
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: |
           set -euo pipefail
-          NDK_LLVM="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64"
-          NDK_CLANG="$NDK_LLVM/bin"
-          cat > host-clang++ <<EOF
-          #!/usr/bin/env bash
-          exec "$NDK_CLANG/clang++" -stdlib=libc++ \
-            -isystem "$NDK_LLVM/sysroot/usr/include/c++/v1" \
-            -isystem "$NDK_LLVM/sysroot/usr/include" "\$@"
-          EOF
-          chmod +x host-clang++
-          sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$NDK_CLANG/clang'#" android_configure.py
-          sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$PWD/host-clang++'#" android_configure.py
+          HOST_CLANG="$(command -v clang)"
+          HOST_CLANGXX="$(command -v clang++)"
+          test -x "$HOST_CLANG"
+          test -x "$HOST_CLANGXX"
+          sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$HOST_CLANG'#" android_configure.py
+          sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$HOST_CLANGXX'#" android_configure.py
           grep -nE "CC_host|CXX_host" android_configure.py
       - name: Build embedded Node arm64 with C++20
         working-directory: prototype/imported/.deps/nodejs-mobile
