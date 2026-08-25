@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'make -j \$(getconf _NPROCESSORS_ONLN)' tools/android_build.sh
-          sed -i 's/make -j \$(getconf _NPROCESSORS_ONLN)/make -j 2/' tools/android_build.sh
+          sed -i 's/make -j \$(getconf _NPROCESSORS_ONLN)/make -j 4/' tools/android_build.sh
           grep -n 'make -j' tools/android_build.sh
       - name: Build embedded Node arm64 with C++20
         working-directory: prototype/imported/.deps/nodejs-mobile
