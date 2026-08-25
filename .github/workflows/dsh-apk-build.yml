@@ -46,7 +46,7 @@ jobs:
       - name: Install Android SDK and NDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;24.0.8215888"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;27.3.13750724"
       - uses: actions/checkout@v4
         with:
           repository: ybaelli/nodejs-mobile
@@ -64,7 +64,7 @@ jobs:
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: |
           set -euo pipefail
-          NDK_CLANG="$ANDROID_HOME/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          NDK_CLANG="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin"
           cat > host-clang++ <<EOF
           #!/usr/bin/env bash
           exec "$NDK_CLANG/clang++" -stdlib=libc++ "\$@"
@@ -73,9 +73,13 @@ jobs:
           sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$NDK_CLANG/clang'#" android_configure.py
           sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$PWD/host-clang++'#" android_configure.py
           grep -nE "CC_host|CXX_host" android_configure.py
-      - name: Build embedded Node arm64
+      - name: Build embedded Node arm64 with C++20
         working-directory: prototype/imported/.deps/nodejs-mobile
-        run: ./tools/android_build.sh "$ANDROID_HOME/ndk/24.0.8215888" 28 arm64
+        run: |
+          set -euo pipefail
+          export CXXFLAGS="${CXXFLAGS:-} -std=gnu++20"
+          export CXXFLAGS_host="${CXXFLAGS_host:-} -std=gnu++20"
+          ./tools/android_build.sh "$ANDROID_HOME/ndk/27.3.13750724" 28 arm64
       - name: Install Node mobile artifacts
         working-directory: prototype/imported
         run: ./scripts/install-node-mobile-artifacts.sh .deps/nodejs-mobile
