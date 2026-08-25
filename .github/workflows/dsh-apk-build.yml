@@ -64,10 +64,13 @@ jobs:
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: |
           set -euo pipefail
-          NDK_CLANG="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          NDK_LLVM="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64"
+          NDK_CLANG="$NDK_LLVM/bin"
           cat > host-clang++ <<EOF
           #!/usr/bin/env bash
-          exec "$NDK_CLANG/clang++" -stdlib=libc++ "\$@"
+          exec "$NDK_CLANG/clang++" -stdlib=libc++ \
+            -isystem "$NDK_LLVM/sysroot/usr/include/c++/v1" \
+            -isystem "$NDK_LLVM/sysroot/usr/include" "\$@"
           EOF
           chmod +x host-clang++
           sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$NDK_CLANG/clang'#" android_configure.py
