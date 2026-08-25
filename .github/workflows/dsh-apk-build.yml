@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - name: Extract Android source package
@@ -71,7 +71,7 @@ jobs:
           sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$HOST_CLANG'#" android_configure.py
           sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$HOST_CLANGXX'#" android_configure.py
           grep -nE "CC_host|CXX_host" android_configure.py
-      - name: Limit Node mobile build parallelism (4 workers)
+      - name: Limit Node mobile build parallelism (4 workers, extended timeout)
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: |
           set -euo pipefail
