@@ -52,6 +52,14 @@ jobs:
           repository: ybaelli/nodejs-mobile
           ref: 4608d3c670cf37b383dbe631de4992cf23da46e0
           path: prototype/imported/.deps/nodejs-mobile
+      - name: Patch Node mobile ncrypto build compatibility
+        working-directory: prototype/imported/.deps/nodejs-mobile
+        run: |
+          set -euo pipefail
+          if ! grep -qxF '#include <vector>' deps/ncrypto/ncrypto.cc; then
+            sed -i '1i#include <vector>' deps/ncrypto/ncrypto.cc
+          fi
+          grep -nF '#include <vector>' deps/ncrypto/ncrypto.cc
       - name: Build embedded Node arm64
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: ./tools/android_build.sh "$ANDROID_HOME/ndk/24.0.8215888" 28 arm64
