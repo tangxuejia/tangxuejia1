@@ -17,10 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Extract Android source package
-        run: mkdir -p prototype/imported && unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d prototype/imported
+        run: |
+          set -euo pipefail
+          rm -rf prototype/imported prototype/extracted
+          mkdir -p prototype/extracted
+          unzip -q deepseek-harness-pura-x-mobile-v0.1.0-source.zip -d prototype/extracted
+          CMAKE_FILE="$(find prototype/extracted -type f -path '*/app/src/main/cpp/CMakeLists.txt' -print -quit)"
+          test -n "$CMAKE_FILE"
+          SOURCE_ROOT="${CMAKE_FILE%/app/src/main/cpp/CMakeLists.txt}"
+          mv "$SOURCE_ROOT" prototype/imported
+          test -f prototype/imported/app/src/main/cpp/CMakeLists.txt
       - name: Apply Android 16 KB page-size linker guard
         working-directory: prototype/imported
         run: |
+          set -euo pipefail
           CMAKE_FILE="app/src/main/cpp/CMakeLists.txt"
           if ! grep -q "max-page-size=16384" "$CMAKE_FILE"; then
             printf '\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")\n' >> "$CMAKE_FILE"
