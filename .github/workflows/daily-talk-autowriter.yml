@@ -47,6 +47,94 @@ jobs:
         if: steps.gate.outputs.should_publish == 'true'
         run: npm ci
 
+      - name: Generate and publish 8 Daily Talk articles
+        if: steps.gate.outputs.should_publish == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
+          WECHAT_APP_ID: ${{ secrets.WECHAT_DAILY_TALK_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_DAILY_TALK_APP_SECRET }}
+          WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
+          TECH_MANILA_DATE: ${{ steps.gate.outputs.manila_date }}
+        run: |
+          set -euo pipefail
+          npm ci
+          for i in 1 2 3 4 5 6 7 8; do
+            case "$i" in
+              1|2|3) lane="AI与大模型" ;;
+              4) lane="手机与消费电子" ;;
+              5) lane="芯片与硬件" ;;
+              6|7) lane="科技行业观察" ;;
+              8) lane="数码实用技巧" ;;
+            esac
+            echo "=== Daily Talk article $i/8: $lane ==="
+            TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs
+            node tech-news/prepare_publish.mjs tech-news/output/daily.json
+            node publisher.mjs tech-news/output/daily.json --dry-run
+            node publisher.mjs tech-news/output/daily.json
+          done
+
+      - name: Record workflow result
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          node tech-news/record_status.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tech-news/status/last-run.json
+          git diff --cached --quiet || git commit -m "chore: record Daily Talk run status" || true
+          git push origin HEAD:master || truename: Daily Talk Tech Autowriter
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "tech-news/run-once.txt"
+  schedule:
+    - cron: "17 0 * * *"
+    - cron: "43 2 * * *"
+    - cron: "11 4 * * *"
+    - cron: "37 6 * * *"
+    - cron: "23 9 * * *"
+    - cron: "49 11 * * *"
+    - cron: "7 13 * * *"
+    - cron: "53 14 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Decide slot
+        id: gate
+        env:
+          TECH_SCHEDULE: ${{ github.event.schedule }}
+          FORCE_PUBLISH: ${{ github.event_name != 'schedule' }}
+        run: node tech-news/slot_guard.mjs
+
+      - name: Install dependencies
+        if: steps.gate.outputs.should_publish == 'true'
+        run: npm ci
+
       - name: Generate Daily Talk article
         if: steps.gate.outputs.should_publish == 'true'
         env:
