@@ -36,6 +36,14 @@ jobs:
             printf '\ntarget_link_options(dsh_bridge PRIVATE "-Wl,-z,max-page-size=16384")\n' >> "$CMAKE_FILE"
           fi
           grep -n "max-page-size=16384" "$CMAKE_FILE"
+      - name: Patch Android Java file API compatibility
+        working-directory: prototype/imported
+        run: |
+          set -euo pipefail
+          JAVA_FILE="app/src/main/java/com/tang/dshmobile/RuntimeInstaller.java"
+          sed -i 's#String value = Files.readString(stamp.toPath(), StandardCharsets.UTF_8).trim();#String value = new String(Files.readAllBytes(stamp.toPath()), StandardCharsets.UTF_8).trim();#' "$JAVA_FILE"
+          sed -i 's#Files.writeString(new File(temp, STAMP).toPath(), VERSION, StandardCharsets.UTF_8);#Files.write(new File(temp, STAMP).toPath(), VERSION.getBytes(StandardCharsets.UTF_8));#' "$JAVA_FILE"
+          grep -nE "readAllBytes|Files.write\(" "$JAVA_FILE"
       - name: Install build prerequisites
         run: sudo apt-get update && sudo apt-get install -y build-essential clang git python3 gcc-multilib g++-multilib rsync zip unzip ninja-build cmake
       - uses: actions/setup-java@v4
