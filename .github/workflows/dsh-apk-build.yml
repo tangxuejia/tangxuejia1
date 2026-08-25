@@ -60,13 +60,18 @@ jobs:
             sed -i '1i#include <vector>' deps/ncrypto/ncrypto.cc
           fi
           grep -nF '#include <vector>' deps/ncrypto/ncrypto.cc
-      - name: Pin Node mobile host compiler to NDK toolchain
+      - name: Pin Node mobile host compiler to NDK libc++
         working-directory: prototype/imported/.deps/nodejs-mobile
         run: |
           set -euo pipefail
           NDK_CLANG="$ANDROID_HOME/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          cat > host-clang++ <<EOF
+          #!/usr/bin/env bash
+          exec "$NDK_CLANG/clang++" -stdlib=libc++ "\$@"
+          EOF
+          chmod +x host-clang++
           sed -i "s#^os.environ\\['CC_host'\\].*#os.environ['CC_host'] = '$NDK_CLANG/clang'#" android_configure.py
-          sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$NDK_CLANG/clang++'#" android_configure.py
+          sed -i "s#^os.environ\\['CXX_host'\\].*#os.environ['CXX_host'] = '$PWD/host-clang++'#" android_configure.py
           grep -nE "CC_host|CXX_host" android_configure.py
       - name: Build embedded Node arm64
         working-directory: prototype/imported/.deps/nodejs-mobile
