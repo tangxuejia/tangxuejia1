@@ -400,14 +400,17 @@ async function imageFromUrl(url, id) {
 async function generateImages(article, items) {
   const prompts = imagePrompts(article, items);
   const images = [];
-  for (const id of ['cover', 'inline1', 'inline2']) {
+  for (const id of ['inline1', 'inline2']) {
     const url = await generateAgnesImage(prompts[id], id);
     images.push(await imageFromUrl(url, id));
-    console.log(`agnes_image_generated=${id}`);
+    console.log('agnes_image_generated=' + id);
   }
-  return images;
+  if (!images.length) throw new Error('No inline images generated');
+  const first = images[0];
+  const cover = { ...first, id: 'cover', filename: first.filename.replace(first.id, 'cover') };
+  console.log('cover_source=first_inline_image');
+  return [cover, ...images];
 }
-
 function escapeHtml(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
