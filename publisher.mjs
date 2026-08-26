@@ -335,25 +335,59 @@ async function addDraft(accessToken, article) {
 }
 
 async function requestJson(url, options, label) {
-  const response = await fetchWithProxy(url, options);
-  const text = await response.text();
-  let data;
+  const maxAttempts = 3;
+  let lastError;
 
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`${label} returned non-JSON response (${response.status}): ${text.slice(0, 300)}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      console.log(`wechat_request=${label} attempt=${attempt}/${maxAttempts}`);
+      const response = await fetchWithProxy(url, options);
+      const text = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`${label} returned non-JSON response (${response.status}): ${text.slice(0, 300)}`);
+      }
+
+      if (!response.ok) {
+        const error = new Error(`${label} HTTP ${response.status}: ${JSON.stringify(data)}`);
+        if (![408, 425, 429, 500, 502, 503, 504].includes(response.status) || attempt === maxAttempts) {
+          throw error;
+        }
+        lastError = error;
+        await retryDelay(attempt);
+        continue;
+      }
+
+      if (data.errcode && data.errcode !== 0) {
+        const error = new Error(`${label} WeChat error ${data.errcode}: ${data.errmsg}${wechatHint(data.errcode)}`);
+        if (data.errcode !== 45009 || attempt === maxAttempts) {
+          throw error;
+        }
+        lastError = error;
+        await retryDelay(attempt);
+        continue;
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`wechat_request_failed=${label} attempt=${attempt}: ${message}`);
+      if (attempt === maxAttempts) {
+        throw new Error(`${label} failed after ${maxAttempts} attempts: ${message}`);
+      }
+      await retryDelay(attempt);
+    }
   }
 
-  if (!response.ok) {
-    throw new Error(`${label} HTTP ${response.status}: ${JSON.stringify(data)}`);
-  }
+  throw lastError ?? new Error(`${label} failed`);
+}
 
-  if (data.errcode && data.errcode !== 0) {
-    throw new Error(`${label} WeChat error ${data.errcode}: ${data.errmsg}${wechatHint(data.errcode)}`);
-  }
-
-  return data;
+async function retryDelay(attempt) {
+  await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
 }
 
 function createProxyAgent() {
@@ -394,11 +428,18 @@ function normalizeProxyUrl(value) {
 }
 
 async function fetchWithProxy(url, options) {
-  if (!proxyAgent) {
-    return fetch(url, options);
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
 
-  return undiciFetch(url, { ...options, dispatcher: proxyAgent });
+  try {
+    const requestOptions = { ...options, signal: controller.signal };
+    if (!proxyAgent) {
+      return await fetch(url, requestOptions);
+    }
+    return await undiciFetch(url, { ...requestOptions, dispatcher: proxyAgent });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function wechatHint(errcode) {
