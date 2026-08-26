@@ -52,6 +52,24 @@ async function text(prompt){
 }
 function json(s){ const t=String(s).replace(/^\`\`\`json/i,'').replace(/\`\`\`$/,'').trim(); const a=t.indexOf('{'),b=t.lastIndexOf('}'); return JSON.parse(t.slice(a,b+1)); }
 
+async function sourceImage(n){
+  try{
+    const r=await fetch(n.url,{headers:{'user-agent':'Mozilla/5.0'}});
+    if(!r.ok) return null;
+    const html=await r.text();
+    const m=html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+    if(!m) return null;
+    const imageUrl=new URL(m[1],n.url).href;
+    const d=await fetch(imageUrl,{headers:{'user-agent':'Mozilla/5.0'}});
+    if(!d.ok) return null;
+    const b=Buffer.from(await d.arrayBuffer());
+    if(b.length<1000) return null;
+    const mime=(d.headers.get('content-type')||'image/jpeg').split(';')[0];
+    if(!mime.startsWith('image/')) return null;
+    return {id:'cover',filename:'source-'+n.id+'.jpg',mime,alt:n.title,base64:b.toString('base64'),source:'original-news'};
+  } catch(e){ console.warn('source_image_failed topic='+n.id+': '+e.message); return null; }
+}
+
 async function img(prompt,id,ratio){
   if(!key) throw new Error('AGNES_API_KEY is missing; image generation cannot start.');
   const variants=[
@@ -130,11 +148,16 @@ async function one(n,i){
   a=a&&a.title&&a.top?a:fallback(n);
   const common='Realistic editorial documentary photography in the Philippines, authentic local setting, natural light, no readable text, no logo, no watermark. The image must directly match this exact news story: '+n.title+'. Story facts: '+n.data+' Audience relevance: '+n.impact+' Do not depict unrelated weather, paperwork, schools, or generic business scenes.';
   const images=[];
+  const originalCover=await sourceImage(n);
+  if(originalCover) images.push(originalCover);
   for(const [id,p,ratio] of [
     ['cover',common+' Wide WeChat cover image about '+n.title+'; Filipino city or business environment, clear focal point.','21:9'],
     ['action',common+' Specific action scene showing the practical response to this exact story, including the relevant Philippine location, equipment, infrastructure, or business context. Chinese residents or businesses should appear only when relevant.','3:2'],
     ['language',common+' Specific everyday conversation scene directly related to this exact story; show the relevant object or setting from the news, realistic Filipino people, no text.','3:2']
-  ]) { try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(`image_failed topic=${n.id} image=${id}: ${e.message}`); } }
+  ]) {
+    if(id==='cover' && originalCover) continue;
+    try { const x=await img(p,id,ratio); if(x) images.push(x); } catch(e){ console.warn(`image_failed topic=${n.id} image=${id}: ${e.message}`); }
+  }
   if (!images.some(x => x.id === 'cover') || images.length < 3) {
     throw new Error(`Topic-specific images failed for ${n.id}; model=${imageModel}; endpoint=${base}; check the preceding image generation error logs.`);
   }
