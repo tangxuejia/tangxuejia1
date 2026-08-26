@@ -9,6 +9,7 @@ on:
       - master
     paths:
       - "wechat-news/batch_writer.mjs"
+      - "publisher.mjs"
       - "wechat-news/prepare_publish.mjs"
       - "wechat-news/content_qc.mjs"
       - "wechat-news/output/run-once.txt"
