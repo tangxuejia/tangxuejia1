@@ -6,35 +6,35 @@ const base = (process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com').repla
 const model = process.env.AGNES_TEXT_MODEL || 'agnes-2.5-flash';
 const imageModel = process.env.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash';
 const out = 'wechat-news/output';
-const date = '2026-08-25（菲律宾时间）'; // batch trigger 2026-08-25T00:00+08:00
+const date = '2026-08-26（菲律宾时间）'; // batch trigger 2026-08-26T00:00+08:00
 
 const news = [
   {
-    id:'obet-super-typhoon',
-    title:'台风Obet可能增强为超强台风，菲律宾进入重点防范期',
-    time:'2026年8月25日，Philstar.com（菲律宾时间）',
-    source:'The Philippine Star',
-    url:'https://www.philstar.com/headlines/2026/08/24/2551352/obet-may-turn-super-typhoon/',
-    data:'报道援引PAGASA信息称，国际名Saudel的热带气旋预计进入菲律宾责任区后命名为Obet，中心曾位于吕宋岛最北端以东约1,950公里，最大风速165公里/小时、阵风205公里/小时，并可能增强为超强台风；其停留时间预计较短，但可能增强西南季风。',
-    impact:'在吕宋、马尼拉及西部受季风影响地区生活和经营的华人，要提前检查航班、海运、门店排水、备用电源和手机通知；不要只看“是否直接登陆”，还要关注季风带来的持续降雨和交通影响。'
-  },
-  {
-    id:'school-safety-drill',
-    title:'菲律宾全国学校今天举行安全演练，家长要先看接送安排',
-    time:'2026年8月25日，Philstar.com报道（菲律宾时间）',
-    source:'Philstar.com',
-    url:'https://www.philstar.com/headlines/2026/08/21/2550825/deped-sets-nationwide-school-safety-drill-campus-threats-august-25',
-    data:'菲律宾教育部要求学校在8月25日上午9时开展全国同步校园安全演练，内容依据各校针对校园攻击事件的应急计划；学校还需准备安全房、疏散路线、紧急沟通和家属集合区域，并邀请地方政府、警察或消防等外部人员评估。',
-    impact:'有孩子在菲律宾上学的华人家庭，今天要提前确认学校是否调整入校、放学和接送流程，保存班主任或学校的紧急联系方式；演练期间应听从校方安排，不把演练消息当成正在发生的袭击。'
-  },
-  {
-    id:'special-nonworking-days',
-    title:'菲律宾3个市镇获宣布特别非工作日，办事和物流要提前确认',
-    time:'2026年8月25日，Inquirer.net报道（菲律宾时间）',
+    id:'visayas-power-alert',
+    title:'维萨亚斯电力告急：峰值时段可能出现供电中断',
+    time:'2026年8月26日，Inquirer.net 04:30（菲律宾时间）',
     source:'INQUIRER.net',
-    url:'https://newsinfo.inquirer.net/2289459/marcos-declares-special-non-working-days-in-3-municipalities',
-    data:'总统府公布的公告安排了3个地方特别非工作日：Quezon省Buenavista为8月26日，Cagayan省Alcala为8月27日，Sultan Kudarat省Isulan为8月28日；相关安排与地方成立纪念日或节庆活动有关。',
-    impact:'在这些地方有门店、仓库、员工、客户或政府手续的华人企业，要提前确认银行、地方政府窗口、快递和货运是否调整营业时间；不要把地方特别非工作日误认为全国放假。'
+    url:'https://newsinfo.inquirer.net/2292436/tight-power-supply-puts-tacloban-2-leyte-towns-on-alert',
+    data:'莱特省电力合作社提醒消费者，维萨亚斯电网在周二下午2至5时、晚间8至10时发布黄色预警，下午5至8时发布红色预警；可用容量约2,421兆瓦，而预测峰值需求约2,570兆瓦，缺口约149兆瓦。',
+    impact:'在塔克洛班、Palo和Babatngon经营餐饮、冷链、网店仓储或小型工厂的华人，应提前给路由器、收银设备、冰柜和备用电源充电，并把高耗电操作避开预警时段。'
+  },
+  {
+    id:'philippines-drone-defense',
+    title:'菲律宾拟扩大军用无人机能力，2027年防务预算拟增至3055亿比索',
+    time:'2026年8月25日，Reuters报道（菲律宾时间）',
+    source:'Reuters',
+    url:'https://www.reuters.com/world/asia-pacific/philippines-seeking-expand-military-drone-capabilities-says-defence-chief-2026-08-25/',
+    data:'菲律宾国防部长表示，政府正扩大无人机研发和采购能力；2027年防务预算提案约3,055亿比索，同比增长6.3%，其中约500亿比索用于现代化，较本年度增加25%。',
+    impact:'这会影响在菲做无人机、通信、安防、软件和工业供应链的华人企业，但军用项目涉及合规、出口管制和政府采购，不能把普通消费级无人机直接当成军工项目参与。'
+  },
+  {
+    id:'sara-duterte-impeachment',
+    title:'菲律宾参议院今天继续审理副总统弹劾案，马尼拉办事安排需留意',
+    time:'2026年8月26日，Philstar.com 08:45（菲律宾时间）',
+    source:'Philstar.com',
+    url:'https://www.philstar.com/headlines/2026/08/26/2551945/live-coverage-sara-dutertes-impeachment-trial-aug-26',
+    data:'菲律宾参议院于8月26日上午10时继续审理副总统Sara Duterte弹劾案。该事件属于正在进行的政治程序，后续以参议院正式议程和公告为准。',
+    impact:'在马尼拉市区办证、跑政府窗口、参加商务会议或安排员工通勤的华人，应关注当天道路、安保和公共机构通知；政治审理不等于全市停工，不要转发未经核实的“全面封路”消息。'
   }
 ];
 
