@@ -60,6 +60,15 @@ jobs:
         run: |
           set -uo pipefail
           npm ci
+          publish_with_retry() {
+            for publish_attempt in 1 2 3; do
+              if node publisher.mjs tech-news/output/daily.json; then return 0; fi
+              echo "publisher_retry=$publish_attempt"
+              sleep $((publish_attempt * 20))
+            done
+            echo "publisher_failed_after_3_attempts"
+            return 1
+          }
           success_count=0
           failed_count=0
           for i in 1 2 3 4 5 6 7 8; do
@@ -77,7 +86,7 @@ jobs:
             for attempt in 1 2 3; do
               echo "=== Daily Talk article $i/8 attempt $attempt: $lane ==="
               rm -f tech-news/output/daily.json
-              if TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs                 && node tech-news/prepare_publish.mjs tech-news/output/daily.json                 && node publisher.mjs tech-news/output/daily.json --dry-run                 && node publisher.mjs tech-news/output/daily.json; then
+              if TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs                 && node tech-news/prepare_publish.mjs tech-news/output/daily.json                 && node publisher.mjs tech-news/output/daily.json --dry-run                 && publish_with_retry; then
                 article_ok=true
                 success_count=$((success_count + 1))
                 echo "article_status=$i success"
