@@ -86,7 +86,7 @@ jobs:
             for attempt in 1 2 3; do
               echo "=== Daily Talk article $i/8 attempt $attempt: $lane ==="
               rm -f tech-news/output/daily.json
-              if TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs                 && node tech-news/prepare_publish.mjs tech-news/output/daily.json                 && node publisher.mjs tech-news/output/daily.json --dry-run                 && publish_with_retry; then
+              if TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs                 && test -s tech-news/output/daily.json                 && node publisher.mjs tech-news/output/daily.json --dry-run                 && publish_with_retry; then
                 article_ok=true
                 success_count=$((success_count + 1))
                 echo "article_status=$i success"
