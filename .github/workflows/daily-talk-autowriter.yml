@@ -8,9 +8,9 @@ on:
     paths:
       - "tech-news/run-once.txt"
   schedule:
-    - cron: "17 0 * * *"
-    - cron: "43 2 * * *"
-    - cron: "11 4 * * *"
+    - cron: "30 0 * * *"
+
+permissions:
     - cron: "37 6 * * *"
     - cron: "23 9 * * *"
     - cron: "49 11 * * *"
