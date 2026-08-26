@@ -40,6 +40,8 @@ jobs:
           set -e
           if [ -z "$AGNES_API_KEY" ]; then echo "AGNES_API_KEY is missing or unavailable to this workflow"; exit 1; fi
           echo "AGNES_API_KEY is present"
+      - name: Syntax check batch writer
+        run: node --check wechat-news/batch_writer.mjs
       - name: Generate exactly 3 Tagalog articles
         env:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
