@@ -20,10 +20,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: daily-talk-publish
+  cancel-in-progress: false
+
 jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,22 +58,42 @@ jobs:
           WECHAT_PROXY_URL: ${{ secrets.WECHAT_PROXY_URL }}
           TECH_MANILA_DATE: ${{ steps.gate.outputs.manila_date }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           npm ci
+          success_count=0
+          failed_count=0
           for i in 1 2 3 4 5 6 7 8; do
             case "$i" in
-              1|2|3) lane="AI与大模型" ;;
-              4) lane="手机与消费电子" ;;
-              5) lane="芯片与硬件" ;;
-              6|7) lane="科技行业观察" ;;
-              8) lane="数码实用技巧" ;;
+              1) lane="国产手机与鸿蒙" ;;
+              2) lane="国产芯片与硬件" ;;
+              3) lane="国产科技与智能设备" ;;
+              4) lane="数码消费与实用提醒" ;;
+              5) lane="AI与大模型" ;;
+              6) lane="国际人工智能" ;;
+              7) lane="国际科技公司" ;;
+              8) lane="当天科技热点观察" ;;
             esac
-            echo "=== Daily Talk article $i/8: $lane ==="
-            TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs
-            node tech-news/prepare_publish.mjs tech-news/output/daily.json
-            node publisher.mjs tech-news/output/daily.json --dry-run
-            node publisher.mjs tech-news/output/daily.json
+            article_ok=false
+            for attempt in 1 2 3; do
+              echo "=== Daily Talk article $i/8 attempt $attempt: $lane ==="
+              rm -f tech-news/output/daily.json
+              if TECH_ARTICLE_INDEX="$i" TECH_EDITORIAL_LANE="$lane" node tech-news/auto_writer.mjs                 && node tech-news/prepare_publish.mjs tech-news/output/daily.json                 && node publisher.mjs tech-news/output/daily.json --dry-run                 && node publisher.mjs tech-news/output/daily.json; then
+                article_ok=true
+                success_count=$((success_count + 1))
+                echo "article_status=$i success"
+                break
+              fi
+              echo "article_status=$i retry=$attempt"
+              sleep $((attempt * 15))
+            done
+            if [ "$article_ok" != "true" ]; then
+              failed_count=$((failed_count + 1))
+              echo "article_status=$i failed_after_3_attempts"
+            fi
           done
+          echo "daily_talk_success_count=$success_count"
+          echo "daily_talk_failed_count=$failed_count"
+          echo "daily_talk_batch_finished=true"
 
       - name: Record workflow result
         if: always()
