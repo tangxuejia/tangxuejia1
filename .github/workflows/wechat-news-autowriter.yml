@@ -48,7 +48,23 @@ jobs:
           AGNES_BASE_URL: ${{ vars.AGNES_BASE_URL || 'https://apihub.agnes-ai.com' }}
           AGNES_TEXT_MODEL: ${{ vars.AGNES_TEXT_MODEL || 'agnes-2.5-flash' }}
           AGNES_IMAGE_MODEL: ${{ vars.AGNES_IMAGE_MODEL || 'agnes-image-2.1-flash' }}
-        run: node wechat-news/batch_writer.mjs
+        run: |
+          set -Eeuo pipefail
+          rm -f wechat-news/output/daily-1.json wechat-news/output/daily-2.json wechat-news/output/daily-3.json wechat-news/output/batch-manifest.json
+          attempt=1
+          while [ "$attempt" -le 2 ]; do
+            echo "generation_attempt=$attempt"
+            if node wechat-news/batch_writer.mjs; then
+              test -s wechat-news/output/batch-manifest.json
+              test "$(node -e "console.log(require('./wechat-news/output/batch-manifest.json').count)")" = "3"
+              break
+            fi
+            echo "generation_failed_attempt=$attempt"
+            rm -f wechat-news/output/daily-1.json wechat-news/output/daily-2.json wechat-news/output/daily-3.json wechat-news/output/batch-manifest.json
+            if [ "$attempt" -eq 2 ]; then exit 1; fi
+            attempt=$((attempt + 1))
+            sleep 5
+          done
       - name: QC all 3 articles
         run: |
           set -e
