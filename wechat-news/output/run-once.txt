@@ -1,0 +1,3 @@
+trigger=2026-08-26T10:00:00+08:00
+workflow=wechat-news-v3.5-batch
+mode=generate-qc-publish-3-in-1
