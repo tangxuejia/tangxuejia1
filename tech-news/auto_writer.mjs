@@ -91,6 +91,7 @@ function parseFeed(xml, source) {
       title: tagValue(block, ['title']),
       link: isAtom ? atomLink(block) : tagValue(block, ['link']),
       description: tagValue(block, ['description', 'summary', 'content']),
+      imageUrl: (block.match(/<(?:media:content|enclosure|media:thumbnail)[^>]+(?:url|href)=["']([^"']+)["']/i)?.[1] || '').trim(),
       pubDate: tagValue(block, ['pubDate', 'published', 'updated']),
     };
   }).filter((item) => item.title && item.link);
@@ -369,22 +370,17 @@ function imagePrompts(article, items) {
 
 async function generateAgnesImage(prompt, id) {
   if (!AGNES_API_KEY) throw new Error('AGNES_API_KEY missing');
-  const response = await fetch(agnesUrl('/v1/images/generations'), {
-    method: 'POST',
-    headers: { authorization: `Bearer ${AGNES_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: AGNES_IMAGE_MODEL,
-      prompt,
-      size: '2K',
-      ratio: id === 'cover' ? '21:9' : '3:2',
-      extra_body: { response_format: 'url' },
-    }),
-  });
-  if (!response.ok) throw new Error(`Agnes image API failed: ${response.status} ${await response.text()}`);
-  const data = await response.json();
-  const url = data.data?.[0]?.url;
-  if (!url) throw new Error('Agnes image API returned no URL');
-  return url;
+  let lastError;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const response = await fetch(agnesUrl('/v1/images/generations'), { method: 'POST', headers: { authorization: 'Bearer ' + AGNES_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ model: AGNES_IMAGE_MODEL, prompt, size: '2K', ratio: id === 'cover' ? '21:9' : '3:2', extra_body: { response_format: 'url' } }) });
+      if (response.ok) { const data = await response.json(); const url = data.data?.[0]?.url; if (!url) throw new Error('Agnes image API returned no URL'); return url; }
+      const body = await response.text(); lastError = new Error('Agnes image API failed: ' + response.status + ' ' + body);
+      if (![429,500,502,503,504].includes(response.status) || attempt === 4) throw lastError;
+      const waitMs = attempt * 12000; console.warn('agnes_retry=' + attempt + ' id=' + id + ' status=' + response.status + ' wait_ms=' + waitMs); await new Promise(resolve => setTimeout(resolve, waitMs));
+    } catch (error) { lastError = error; if (attempt === 4) throw error; await new Promise(resolve => setTimeout(resolve, attempt * 12000)); }
+  }
+  throw lastError;
 }
 
 async function imageFromUrl(url, id) {
@@ -398,18 +394,11 @@ async function imageFromUrl(url, id) {
 }
 
 async function generateImages(article, items) {
-  const prompts = imagePrompts(article, items);
-  const images = [];
-  for (const id of ['inline1', 'inline2']) {
-    const url = await generateAgnesImage(prompts[id], id);
-    images.push(await imageFromUrl(url, id));
-    console.log('agnes_image_generated=' + id);
-  }
-  if (!images.length) throw new Error('No inline images generated');
-  const first = images[0];
-  const cover = { ...first, id: 'cover', filename: first.filename.replace(first.id, 'cover') };
-  console.log('cover_source=first_inline_image');
-  return [cover, ...images];
+  const prompts = imagePrompts(article, items); const images = []; const sourceImages = items.map(item => item.imageUrl).filter(Boolean).slice(0, 2);
+  for (let index = 0; index < 2; index++) { const id = 'inline' + (index + 1); let image;
+    if (sourceImages[index]) { try { image = await imageFromUrl(sourceImages[index], id); console.log('source_image_used=' + id); } catch (error) { console.warn('source_image_failed=' + id + ' ' + error.message); } }
+    if (!image) { const url = await generateAgnesImage(prompts[id], id); image = await imageFromUrl(url, id); console.log('agnes_image_generated=' + id); } images.push(image); }
+  const first = images[0]; const cover = { ...first, id: 'cover', filename: first.filename.replace(first.id, 'cover') }; console.log(sourceImages.length ? 'cover_source=first_source_image' : 'cover_source=first_inline_image'); return [cover, ...images];
 }
 function escapeHtml(value = '') {
   return String(value)
